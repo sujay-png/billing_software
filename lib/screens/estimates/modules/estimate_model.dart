@@ -1,31 +1,47 @@
 class EstimateModel {
   final String reference;
   final String estimateNumber;
-  final String customerRef;
+  final String customerName;
+  final String? customerPhone;
+  final String? billingAddress;
+  final DateTime estimateDate;
+  final DateTime expiryDate;
   final double subtotal;
   final double discount;
   final double total;
   final String status;
+  final String? notes;
+  final String? terms;
 
   EstimateModel({
     required this.reference,
     required this.estimateNumber,
-    required this.customerRef,
+    required this.customerName,
+    this.customerPhone,
+    this.billingAddress,
+    required this.estimateDate,
+    required this.expiryDate,
     required this.subtotal,
     required this.discount,
     required this.total,
     required this.status,
+    this.notes,
+    this.terms,
   });
 
-  factory EstimateModel.fromMap(Map<String, dynamic> map) {
-    return EstimateModel(
-      reference: map['reference'],
-      estimateNumber: map['estimate_number'],
-      customerRef: map['customer_ref'],
-      subtotal: (map['subtotal'] as num).toDouble(),
-      discount: (map['discount'] as num).toDouble(),
-      total: (map['total'] as num).toDouble(),
-      status: map['status'],
-    );
+Map<String, dynamic> toMap(String businessRef, String customerRef) { 
+    return {
+      'business_ref': businessRef,    
+      'customer_ref': customerRef,    
+      'estimate_number': estimateNumber,
+      'estimate_date': estimateDate.toIso8601String(),
+      'expiry_date': expiryDate.toIso8601String(),
+      'subtotal': subtotal,
+      'discount': discount,
+      'total': total,
+      'status': status.toLowerCase(), 
+      'notes': notes,
+      'terms': terms,
+    };
   }
 }

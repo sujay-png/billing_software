@@ -4,6 +4,7 @@ import 'package:billing_software/screens/items/add_items.dart';
 import 'package:billing_software/screens/estimates/estimate.dart';
 import 'package:billing_software/widgets/app_shell.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; 
 
@@ -19,7 +20,11 @@ void main() async {
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5hZHhrdWltdXFxbXh5bWxiZGdmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3NzMwMDgsImV4cCI6MjA4NzM0OTAwOH0.wlN5FQVSsoAF1_uz2PLU6rwvQ4Q8TddX8GocVHOF9bI',
   );
 
-  runApp(const MyApp());
+   runApp(
+    const ProviderScope(
+      child: MyApp(),
+    ),
+  );
 }
 
 // 3. Move GoRouter outside of the build method to prevent route resets on rebuild

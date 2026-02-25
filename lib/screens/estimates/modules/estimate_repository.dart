@@ -1,65 +1,34 @@
-import 'package:billing_software/screens/estimates/modules/estimate_item_model.dart';
 import 'package:billing_software/screens/estimates/modules/estimate_model.dart';
-
 import '../../../core/supabase_client.dart';
 
+// estimate_repository.dart
 
 class EstimateRepository {
-
-  Future<List<EstimateModel>> fetchEstimates() async {
-    final response = await supabase
-        .from('estimates')
-        .select()
-        .order('created_at', ascending: false);
-
-    return (response as List)
-        .map((e) => EstimateModel.fromMap(e))
-        .toList();
-  }
-
   Future<void> createEstimate({
     required EstimateModel estimate,
-    required List<EstimateItemModel> items,
+    required List<Map<String, dynamic>> items,
     required String businessRef,
+    required String customerRef, // Add this
   }) async {
-
-    final inserted = await supabase
+    // 1. Insert Estimate
+    final insertedEstimate = await supabase
         .from('estimates')
-        .insert({
-          'business_ref': businessRef,
-          'estimate_number': estimate.estimateNumber,
-          'customer_ref': estimate.customerRef,
-          'subtotal': estimate.subtotal,
-          'discount': estimate.discount,
-          'total': estimate.total,
-          'status': estimate.status,
-        })
+        .insert(estimate.toMap(businessRef, customerRef)) // Pass both
         .select()
         .single();
 
-    final estimateRef = inserted['reference'];
+    final String estimateRef = insertedEstimate['reference'];
 
-    for (final item in items) {
-      await supabase
-          .from('estimate_items')
-          .insert(item.toMap(businessRef, estimateRef));
-    }
-  }
+    // 2. Batch Insert Items
+    final itemsToInsert = items.map((item) => {
+      'business_ref': businessRef,
+      'estimate_ref': estimateRef,
+      'description': item['description'],
+      'qty': item['qty'],
+      'rate': item['rate'],
+      'amount': item['amount'],
+    }).toList();
 
-  Future<Map<String, dynamic>> fetchEstimateWithItems(String reference) async {
-    final data = await supabase
-        .from('estimates')
-        .select('*, estimate_items(*)')
-        .eq('reference', reference)
-        .single();
-
-    return data;
-  }
-
-  Future<void> deleteEstimate(String reference) async {
-    await supabase
-        .from('estimates')
-        .delete()
-        .eq('reference', reference);
+    await supabase.from('estimate_items').insert(itemsToInsert);
   }
 }
