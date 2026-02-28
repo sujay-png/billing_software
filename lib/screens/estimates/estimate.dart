@@ -1,4 +1,8 @@
+import 'package:billing_software/screens/estimates/modules/estimate_provider.dart';
+import 'package:billing_software/screens/estimates/modules/estimatelist_Provider.dart';
+import 'package:billing_software/screens/estimates/modules/searchprovider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class EstimateDashboard extends StatelessWidget {
@@ -57,15 +61,25 @@ class HeaderSection extends StatelessWidget {
 
 /* ---------------- TOP NAVIGATION ---------------- */
 
-class TopNavigation extends StatelessWidget {
+class TopNavigation extends ConsumerWidget {
+  // Can be Stateless now!
   const TopNavigation({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Row(
-      children: const [
-        Expanded(child: BreadcrumbSection()),
-        Expanded(flex: 2, child: SearchBarWidget()),
+      children: [
+        const Expanded(child: BreadcrumbSection()),
+        Expanded(
+          flex: 2,
+          child: SearchBarWidget(
+            onChanged: (value) {
+              // Update the global provider state
+              ref.read(estimateSearchProvider.notifier).state = value
+                  .toLowerCase();
+            },
+          ),
+        ),
       ],
     );
   }
@@ -103,7 +117,9 @@ class BreadcrumbSection extends StatelessWidget {
 }
 
 class SearchBarWidget extends StatelessWidget {
-  const SearchBarWidget({super.key});
+  final ValueChanged<String> onChanged; // Callback to notify parent of changes
+
+  const SearchBarWidget({super.key, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -118,12 +134,13 @@ class SearchBarWidget extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
         ),
         child: Row(
-          children: const [
-            Icon(Icons.search, size: 20, color: Color(0xFF9CA3AF)),
-            SizedBox(width: 12),
+          children: [
+            const Icon(Icons.search, size: 20, color: Color(0xFF9CA3AF)),
+            const SizedBox(width: 12),
             Expanded(
               child: TextField(
-                decoration: InputDecoration(
+                onChanged: onChanged, // Trigger the callback on every keystroke
+                decoration: const InputDecoration(
                   hintText: "Search estimates, customers...",
                   hintStyle: TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
                   border: InputBorder.none,
@@ -155,7 +172,6 @@ class TableHeaderRow extends StatelessWidget {
             color: Color(0xFF111827),
           ),
         ),
-        Row(children: [ActionBtn("Filter"), const SizedBox(width: 12)]),
       ],
     );
   }
@@ -163,23 +179,49 @@ class TableHeaderRow extends StatelessWidget {
 
 class ActionBtn extends StatelessWidget {
   final String label;
-  const ActionBtn(this.label, {super.key});
+  final IconData? icon;
+  final VoidCallback onTap;
+  final Color? color;
+
+  const ActionBtn({
+    required this.label,
+    required this.onTap,
+    this.icon,
+    this.color,
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3F4F6),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-          color: Color(0xFF374151),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          // Uses the provided color with transparency, or default gray
+          color: color?.withOpacity(0.1) ?? const Color(0xFFF3F4F6),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: color?.withOpacity(0.5) ?? const Color(0xFFE5E7EB),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 14, color: color ?? const Color(0xFF374151)),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: color ?? const Color(0xFF374151),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -188,65 +230,81 @@ class ActionBtn extends StatelessWidget {
 
 /* ---------------- TABLE ---------------- */
 
-class EstimatesTable extends StatelessWidget {
+class EstimatesTable extends ConsumerWidget {
   const EstimatesTable({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final estimatesAsync = ref.watch(estimatesListProvider);
+    final searchQuery = ref.watch(estimateSearchProvider).toLowerCase();
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE5E7EB)),
       ),
-      child: Column(
-        children: const [
-          TableHeader(),
-          Divider(height: 1),
-          TableRowItem(
-            "Oct 24, 2023",
-            "EST-001",
-            "Acme Corp",
-            "\$1,200.00",
-            "Sent",
+      child: estimatesAsync.when(
+        loading: () => const Center(
+          child: Padding(
+            padding: EdgeInsets.all(32.0),
+            child: CircularProgressIndicator(),
           ),
-          Divider(height: 1),
-          TableRowItem(
-            "Oct 23, 2023",
-            "EST-002",
-            "Global Tech",
-            "\$4,500.00",
-            "Accepted",
-          ),
-          Divider(height: 1),
-          TableRowItem(
-            "Oct 22, 2023",
-            "EST-003",
-            "Orbit Inc",
-            "\$850.00",
-            "Draft",
-          ),
-          Divider(height: 1),
-          TableRowItem(
-            "Oct 21, 2023",
-            "EST-004",
-            "Studio Design",
-            "\$2,100.00",
-            "Sent",
-          ),
-          Divider(height: 1),
-          TableRowItem(
-            "Oct 20, 2023",
-            "EST-005",
-            "Nexus Ltd",
-            "\$3,300.00",
-            "Declined",
-          ),
-          Divider(height: 1),
-          TableFooter(),
-        ],
+        ),
+        error: (err, stack) => Center(child: Text("Error: $err")),
+        data: (estimates) {
+          // 1. Filter the list based on the search query
+          final filteredEstimates = estimates.where((est) {
+            final name = (est['customer_name'] ?? '').toString().toLowerCase();
+            final number = (est['estimate_number'] ?? '')
+                .toString()
+                .toLowerCase();
+            return name.contains(searchQuery) || number.contains(searchQuery);
+          }).toList();
+
+          if (filteredEstimates.isEmpty) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32.0),
+                child: Text("No matching estimates found."),
+              ),
+            );
+          }
+
+          return Column(
+            children: [
+              const TableHeader(),
+              const Divider(height: 1),
+              // 2. Map the FILTERED list to UI rows
+              ...filteredEstimates
+                  .map(
+                    (est) => Column(
+                      children: [
+                        TableRowItem(
+                          _formatDate(est['estimate_date']),
+                          est['estimate_number'] ?? 'N/A',
+                          est['reference'] ?? '',
+                          est['customer_name'] ?? 'N/A',
+                          "\$${est['total']}",
+                          est['status'] ?? 'Draft',
+                        ),
+                        const Divider(height: 1),
+                      ],
+                    ),
+                  )
+                  .toList(),
+              const TableFooter(),
+            ],
+          );
+        },
       ),
     );
+  }
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null) return "N/A";
+    final date = DateTime.parse(dateStr);
+    return "${date.day}/${date.month}/${date.year}";
   }
 }
 
@@ -290,12 +348,13 @@ class HeaderText extends StatelessWidget {
   }
 }
 
-class TableRowItem extends StatelessWidget {
-  final String date, id, customer, amount, status;
+class TableRowItem extends ConsumerWidget {
+  final String date, id, reference, customer, amount, status;
 
   const TableRowItem(
     this.date,
     this.id,
+    this.reference,
     this.customer,
     this.amount,
     this.status, {
@@ -303,10 +362,10 @@ class TableRowItem extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return InkWell(
       onTap: () {
-        context.go('/estimates/$id');
+        context.go('/estimates/$reference');
       },
       child: Container(
         height: 64,
@@ -315,14 +374,20 @@ class TableRowItem extends StatelessWidget {
           children: [
             Expanded(flex: 2, child: Text(date)),
             Expanded(
-                flex: 2,
-                child: Text(id,
-                    style: const TextStyle(fontWeight: FontWeight.w600))),
+              flex: 2,
+              child: Text(
+                id,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
             Expanded(flex: 3, child: Text(customer)),
             Expanded(
-                flex: 2,
-                child: Text(amount,
-                    style: const TextStyle(fontWeight: FontWeight.w600))),
+              flex: 2,
+              child: Text(
+                amount,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
             Expanded(
               flex: 2,
               child: Align(
@@ -330,11 +395,59 @@ class TableRowItem extends StatelessWidget {
                 child: StatusBadge(status: status),
               ),
             ),
-            const Expanded(
+            Expanded(
               flex: 1,
               child: Align(
                 alignment: Alignment.centerRight,
-                child: Icon(Icons.more_vert, size: 18),
+                child: PopupMenuButton<String>(
+                  // 1. Style the trigger icon
+                  icon: const Icon(
+                    Icons.more_vert,
+                    size: 18,
+                    color: Color(0xFF6B7280),
+                  ),
+                  padding: EdgeInsets.zero,
+                  tooltip: "Actions",
+
+                  // 2. Define the callback when an item is selected
+                  onSelected: (String value) {
+                    if (value == 'edit') {
+                      context.go('/estimates/edit/$reference');
+                    } else if (value == 'delete') {
+                      // Trigger the confirm delete dialog we created earlier
+                      _confirmDelete(context, ref, reference);
+                    }
+                  },
+
+                  // 3. Build the menu items
+                  itemBuilder: (BuildContext context) => [
+                    const PopupMenuItem<String>(
+                      value: 'edit',
+                      child: ListTile(
+                        leading: Icon(Icons.edit, size: 18, color: Colors.blue),
+                        title: Text('Edit', style: TextStyle(fontSize: 14)),
+                        contentPadding: EdgeInsets.zero,
+                        dense: true,
+                      ),
+                    ),
+                    const PopupMenuItem<String>(
+                      value: 'delete',
+                      child: ListTile(
+                        leading: Icon(
+                          Icons.delete_outline,
+                          size: 18,
+                          color: Colors.red,
+                        ),
+                        title: Text(
+                          'Delete',
+                          style: TextStyle(fontSize: 14, color: Colors.red),
+                        ),
+                        contentPadding: EdgeInsets.zero,
+                        dense: true,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -343,6 +456,7 @@ class TableRowItem extends StatelessWidget {
     );
   }
 }
+
 class StatusBadge extends StatelessWidget {
   final String status;
 
@@ -466,4 +580,30 @@ class StatCard extends StatelessWidget {
       ),
     );
   }
+}
+
+//-----------------Confrim Delete--------------------//
+void _confirmDelete(BuildContext context, WidgetRef ref, String refId) {
+  showDialog(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text("Delete Estimate"),
+      content: const Text(
+        "Are you sure? This will also remove all line items.",
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text("Cancel"),
+        ),
+        TextButton(
+          onPressed: () async {
+            await ref.read(estimateProvider.notifier).deleteEstimate(refId);
+            Navigator.pop(ctx);
+          },
+          child: const Text("Delete", style: TextStyle(color: Colors.red)),
+        ),
+      ],
+    ),
+  );
 }

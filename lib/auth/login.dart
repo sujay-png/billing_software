@@ -160,39 +160,18 @@ class _LoginPageState extends State<LoginPage> {
                         password: password,
                       );
 
-                      final user = response.user;
-
-                      if (user == null) {
-                        throw Exception("Login failed");
-                      }
-
-                      // 🔥 Check if student profile exists
-                      final student = await supabase
-                          .from('student')
-                          .select()
-                          .eq('user_id', user.id)
-                          .maybeSingle();
-
-                      if (!mounted) return;
-
-                      if (student == null) {
-                        // No profile yet
-                        context.go('/AddStudent');
-                      } else {
-                        context.go('/home');
-                      }
+                      // ✅ Auth success → router redirect will handle navigation
+                      messenger.showSnackBar(
+                        const SnackBar(content: Text('Login successful')),
+                      );
                     } on AuthException catch (e) {
                       messenger.showSnackBar(
                         SnackBar(content: Text(e.message)),
                       );
-                    } catch (e) {
+                    } catch (_) {
                       messenger.showSnackBar(
                         const SnackBar(content: Text('Something went wrong')),
                       );
-                    } finally {
-                      if (mounted) {
-                        setState(() => isLoading = false);
-                      }
                     }
                   },
                   child: const Text(

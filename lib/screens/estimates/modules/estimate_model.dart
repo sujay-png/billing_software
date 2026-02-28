@@ -1,5 +1,5 @@
 class EstimateModel {
-  final String reference;
+  final String? reference; 
   final String estimateNumber;
   final String customerName;
   final String? customerPhone;
@@ -14,7 +14,7 @@ class EstimateModel {
   final String? terms;
 
   EstimateModel({
-    required this.reference,
+    this.reference, 
     required this.estimateNumber,
     required this.customerName,
     this.customerPhone,
@@ -29,8 +29,8 @@ class EstimateModel {
     this.terms,
   });
 
-Map<String, dynamic> toMap(String businessRef, String customerRef) { 
-    return {
+  Map<String, dynamic> toMap(String businessRef, String customerRef) { 
+    final map = {
       'business_ref': businessRef,    
       'customer_ref': customerRef,    
       'estimate_number': estimateNumber,
@@ -43,5 +43,12 @@ Map<String, dynamic> toMap(String businessRef, String customerRef) {
       'notes': notes,
       'terms': terms,
     };
+
+    // Only add reference if it was manually provided
+    if (reference != null && reference!.isNotEmpty) {
+      map['reference'] = reference;
+    }
+
+    return map;
   }
 }

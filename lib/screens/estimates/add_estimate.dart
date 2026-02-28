@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:billing_software/screens/estimates/modules/estimate_model.dart';
 import 'package:billing_software/screens/estimates/modules/estimate_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 
 class CreateEstimate extends ConsumerStatefulWidget {
@@ -46,18 +47,55 @@ class _CreateEstimateState extends ConsumerState<CreateEstimate> {
   }
 
   // --- FIXED SAVE LOGIC ---
-  Future<void> _handleSave() async {
-    // 1. Validation
-    if (_customerNameController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter a customer name")),
-      );
-      return;
-    }
+ Future<void> _handleSave() async {
+  if (_customerNameController.text.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Please enter a customer name")),
+    );
+    return;
+  }
 
-    setState(() => _isSaving = true);
+  setState(() => _isSaving = true);
+  final supabase = Supabase.instance.client;
 
-    // 2. Map items to JSON/Maps
+  try {
+    // 1. Fetch Business Reference (UUID)
+   final businessData = await supabase
+    .from('business')
+    .select('reference')
+    .limit(1)
+    .maybeSingle();
+
+if (businessData == null) throw Exception("Please set up your Business Profile first.");
+final String businessRef = businessData['reference'];
+
+// 2. Fetch or Create Customer Reference (UUID)
+final existingCustomer = await supabase
+    .from('customers')
+    .select('reference')
+    .eq('name', _customerNameController.text.trim())
+    .maybeSingle();
+
+String customerRef;
+
+if (existingCustomer != null) {
+  customerRef = existingCustomer['reference'];
+} else {
+  // AUTO-CREATE CUSTOMER if they don't exist
+  final newCustomer = await supabase
+      .from('customers')
+      .insert({
+        'name': _customerNameController.text.trim(),
+        'business_ref': businessRef,
+        'phone': _phoneController.text,
+        'billing_address': _addressController.text,
+      })
+      .select('reference')  
+      .single();
+  customerRef = newCustomer['reference'];
+}
+
+    // 3. Prepare Line Items
     final lineItems = _items.map((item) => {
       'description': item.description,
       'qty': item.qty,
@@ -65,9 +103,9 @@ class _CreateEstimateState extends ConsumerState<CreateEstimate> {
       'amount': item.total,
     }).toList();
 
-    // 3. Create Model instance correctly
+    // 4. Create Model
     final estimate = EstimateModel(
-      reference: _referenceController.text,
+      reference: _referenceController.text.isEmpty ? null : _referenceController.text,
       estimateNumber: _estimateNumberController.text,
       customerName: _customerNameController.text,
       customerPhone: _phoneController.text,
@@ -82,31 +120,30 @@ class _CreateEstimateState extends ConsumerState<CreateEstimate> {
       terms: _termsController.text,
     );
 
-    try {
-      // 4. Access the provider - Ensure these are valid UUIDs from your DB
-      // 'businessRef' and 'customerRef' must match existing rows in your DB
-      await ref.read(estimateProvider.notifier).createEstimate(
-        estimate: estimate,
-        items: lineItems,
-        businessRef: "550e8400-e29b-41d4-a716-446655440000", // CHANGE TO REAL UUID
-        customerRef: "550e8400-e29b-41d4-a716-446655440001", // CHANGE TO REAL UUID
-      );
+    // 5. Save via Provider
+    await ref.read(estimateProvider.notifier).createEstimate(
+      estimate: estimate,
+      items: lineItems,
+      businessRef: businessRef,
+      customerRef: customerRef,
+    );
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Estimate saved successfully!")),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error saving: $e"), backgroundColor: Colors.red),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Estimate saved successfully!"), backgroundColor: Colors.green),
+      );
     }
+  } catch (e) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+      );
+    }
+  } finally {
+    if (mounted) setState(() => _isSaving = false);
   }
+}
+
 
   @override
   Widget build(BuildContext context) {

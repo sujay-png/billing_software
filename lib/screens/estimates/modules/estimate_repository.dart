@@ -1,4 +1,5 @@
 import 'package:billing_software/screens/estimates/modules/estimate_model.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/supabase_client.dart';
 
 // estimate_repository.dart
@@ -30,5 +31,14 @@ class EstimateRepository {
     }).toList();
 
     await supabase.from('estimate_items').insert(itemsToInsert);
+  }
+  final _supabase = Supabase.instance.client;
+
+  // This matches the call in the Notifier
+  Future<void> deleteEstimate(String reference) async {
+    await _supabase
+        .from('estimates')
+        .delete()
+        .eq('reference', reference);
   }
 }
