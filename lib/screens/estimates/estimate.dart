@@ -8,15 +8,17 @@ class EstimateDashboard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
-      body: Row(
-        children: const [
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.all(32),
-              child: DashboardContent(),
+      body: SingleChildScrollView(
+        child: Row(
+          children: const [
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: DashboardContent(),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

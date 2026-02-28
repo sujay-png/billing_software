@@ -1,3 +1,4 @@
+import 'package:billing_software/auth/login.dart';
 import 'package:billing_software/screens/estimates/add_estimate.dart';
 import 'package:billing_software/screens/estimates/estimate_preview.dart';
 import 'package:billing_software/screens/items/add_items.dart';
@@ -29,13 +30,36 @@ void main() async {
 
 // 3. Move GoRouter outside of the build method to prevent route resets on rebuild
 final _router = GoRouter(
-  initialLocation: '/estimates',
+  initialLocation: '/login',
+  redirect: (context, state) {
+  final session = supabase.auth.currentSession;
+  final loggedIn = session != null;
+
+  final isLogin = state.uri.path == '/login';
+
+  if (!loggedIn) {
+    return isLogin ? null : '/login';
+  }
+
+  if (isLogin) {
+    return '/estimates';
+  }
+
+  return null;
+},
   routes: [
+     GoRoute(
+       path: '/login',
+    builder: (context, state) => const LoginPage(),
+    ),
     ShellRoute(
       builder: (context, state, child) {
         return AppShell(child: child);
       },
       routes: [
+
+        //-----LOGIN-------
+        
         // -------- ESTIMATES --------
         GoRoute(
           path: '/estimates',
