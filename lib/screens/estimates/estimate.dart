@@ -40,7 +40,7 @@ class DashboardContent extends StatelessWidget {
         SizedBox(height: 24),
         EstimatesTable(),
         SizedBox(height: 32),
-        StatsSection(),
+       
       ],
     );
   }
@@ -525,22 +525,7 @@ class TableFooter extends StatelessWidget {
 
 /* ---------------- STATS ---------------- */
 
-class StatsSection extends StatelessWidget {
-  const StatsSection({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: const [
-        Expanded(child: StatCard("TOTAL OUTSTANDING", "\$12,450.00")),
-        SizedBox(width: 24),
-        Expanded(child: StatCard("ACCEPTANCE RATE", "82%")),
-        SizedBox(width: 24),
-        Expanded(child: StatCard("AVG. RESPONSE TIME", "1.2 Days")),
-      ],
-    );
-  }
-}
 
 class StatCard extends StatelessWidget {
   final String title, value;

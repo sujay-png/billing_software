@@ -1,3 +1,4 @@
+import 'package:billing_software/screens/items/modules/item_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:billing_software/screens/estimates/modules/estimate_model.dart';
@@ -45,7 +46,38 @@ class _CreateEstimateState extends ConsumerState<CreateEstimate> {
       _items.add(LineItem(description: "", qty: 1, rate: 0));
     });
   }
+   List<ItemModel> _availableItems = [];
+  bool _isLoadingItems = true;
 
+Future<void> _fetchItems() async {
+  final supabase = Supabase.instance.client;
+
+  try {
+    // 🔥 Get business reference first
+    final businessData = await supabase
+        .from('business')
+        .select('reference')
+        .limit(1)
+        .single();
+
+    final businessRef = businessData['reference'];
+
+    // 🔥 Fetch only this business items
+    final response = await supabase
+        .from('items')
+        .select()
+        .eq('business_ref', businessRef)
+        .order('item_name');
+
+    setState(() {
+      _availableItems =
+          (response as List).map((e) => ItemModel.fromMap(e)).toList();
+      _isLoadingItems = false;
+    });
+  } catch (e) {
+    setState(() => _isLoadingItems = false);
+  }
+}
   // --- FIXED SAVE LOGIC ---
  Future<void> _handleSave() async {
   if (_customerNameController.text.isEmpty) {
@@ -97,11 +129,12 @@ if (existingCustomer != null) {
 
     // 3. Prepare Line Items
     final lineItems = _items.map((item) => {
-      'description': item.description,
-      'qty': item.qty,
-      'rate': item.rate,
-      'amount': item.total,
-    }).toList();
+  'item_ref': item.itemRef,   // 🔥 UUID reference
+  'description': item.description,
+  'qty': item.qty,
+  'rate': item.rate,
+  'amount': item.total,
+}).toList();
 
     // 4. Create Model
     final estimate = EstimateModel(
@@ -336,43 +369,106 @@ if (existingCustomer != null) {
     );
   }
 
-  Widget _buildItemRow(int index) {
-    final item = _items[index];
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          const SizedBox(width: _dragWidth, child: Icon(Icons.drag_indicator, color: Colors.grey)),
-          Expanded(
-            child: TextField(
-              onChanged: (val) => item.description = val,
-              controller: TextEditingController(text: item.description)..selection = TextSelection.collapsed(offset: item.description.length),
-              decoration: const InputDecoration(border: InputBorder.none, hintText: "Description"),
-            ),
+Widget _buildItemRow(int index) {
+  final item = _items[index];
+
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    child: Row(
+      children: [
+        const SizedBox(
+          width: _dragWidth,
+          child: Icon(Icons.drag_indicator, color: Colors.grey),
+        ),
+
+        // 🔥 ITEM DROPDOWN
+        Expanded(
+          child: _isLoadingItems
+              ? const SizedBox(
+                  height: 40,
+                  child: Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              : DropdownButtonFormField<String>(
+                  value: item.itemRef,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    hintText: "Select Item",
+                  ),
+                  items: _availableItems.map((itm) {
+                    return DropdownMenuItem<String>(
+                      value: itm.reference,
+                      child: Row(
+                        children: [
+                          Expanded(child: Text(itm.name)),
+                          Text(
+                            "₹${itm.rate}",
+                            style: const TextStyle(color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value == null) return;
+
+                    final selectedItem =
+                        _availableItems.firstWhere((e) => e.reference == value);
+
+                    setState(() {
+                      item.itemRef = selectedItem.reference;
+                      item.description = selectedItem.name;
+                      item.rate = selectedItem.rate;
+                    });
+                  },
+                ),
+        ),
+
+        SizedBox(
+          width: _qtyWidth,
+          child: TextField(
+            textAlign: TextAlign.center,
+            onChanged: (val) =>
+                setState(() => item.qty = double.tryParse(val) ?? 0),
+            decoration: _inputDecoration("0"),
           ),
-          SizedBox(
-            width: _qtyWidth,
-            child: TextField(
-              textAlign: TextAlign.center,
-              onChanged: (val) => setState(() => item.qty = double.tryParse(val) ?? 0),
-              decoration: _inputDecoration("0"),
-            ),
+        ),
+
+        const SizedBox(width: 8),
+
+        SizedBox(
+          width: _rateWidth,
+          child: TextField(
+            textAlign: TextAlign.center,
+            onChanged: (val) =>
+                setState(() => item.rate = double.tryParse(val) ?? 0),
+            decoration:
+                _inputDecoration("0.00").copyWith(prefixText: "₹ "),
           ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: _rateWidth,
-            child: TextField(
-              textAlign: TextAlign.center,
-              onChanged: (val) => setState(() => item.rate = double.tryParse(val) ?? 0),
-              decoration: _inputDecoration("0.00").copyWith(prefixText: "\$ "),
-            ),
+        ),
+
+        SizedBox(
+          width: _amountWidth,
+          child: Text(
+            "₹${item.total.toStringAsFixed(2)}",
+            textAlign: TextAlign.right,
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
-          SizedBox(width: _amountWidth, child: Text("\$${item.total.toStringAsFixed(2)}", textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.bold))),
-          SizedBox(width: _actionWidth, child: IconButton(icon: const Icon(Icons.delete_outline), onPressed: () => setState(() => _items.removeAt(index)))),
-        ],
-      ),
-    );
-  }
+        ),
+
+        SizedBox(
+          width: _actionWidth,
+          child: IconButton(
+            icon: const Icon(Icons.delete_outline),
+            onPressed: () => setState(() => _items.removeAt(index)),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildSummary() {
     return Container(
@@ -444,15 +540,23 @@ if (existingCustomer != null) {
   }
 }
 
+
 // Support Classes
 class LineItem {
+  String? itemRef; // 🔥 UUID reference
   String description;
   double qty;
   double rate;
-  LineItem({required this.description, required this.qty, required this.rate});
+
+  LineItem({
+    this.itemRef,
+    required this.description,
+    required this.qty,
+    required this.rate,
+  });
+
   double get total => qty * rate;
 }
-
 class _SectionCard extends StatelessWidget {
   final String title;
   final Widget child;

@@ -4,6 +4,7 @@ import 'package:billing_software/screens/estimates/modules/customer_model.dart';
 import 'package:billing_software/screens/estimates/modules/estimate_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
@@ -64,14 +65,16 @@ Widget build(BuildContext context) {
 }
 
   // --- Top Action Bar ---
-  Widget _buildTopActionBar(BuildContext context) {
+Widget _buildTopActionBar(BuildContext context) {
   final estimateAsync = ref.watch(singleEstimateProvider(widget.estimateId));
 
-  // We unwrap the data here so 'estimate' becomes available to the Row
+  // This 'business' variable is defined at the top scope of the method
+  final business = widget.estimateId;
+
   return estimateAsync.when(
-    loading: () => const SizedBox.shrink(), // Or a small loader
+    loading: () => const SizedBox.shrink(),
     error: (err, stack) => const Text("Error loading actions"),
-    data: (estimate) { // 'estimate' is now defined and available below
+    data: (estimate) { // This 'estimate' is the fresh data from your provider
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         decoration: const BoxDecoration(
@@ -86,7 +89,6 @@ Widget build(BuildContext context) {
               children: [
                 const Text("ESTIMATE PREVIEW", 
                   style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
-                // Dynamically fetch the estimate number from the backend data
                 Text(estimate['estimate_number'] ?? "#N/A", 
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ],
@@ -99,27 +101,24 @@ Widget build(BuildContext context) {
               _buildActionButton(
                 Icons.save, 
                 "Save Changes", 
-                onTap: () => _saveChanges(estimate), // Now 'estimate' is valid!
+                onTap: () => _saveChanges(estimate), 
               ),
             ] else ...[
               _buildActionButton(Icons.edit, "Edit", 
                 onTap: () => setState(() => isEditing = true)),
             ],
             const SizedBox(width: 12),
-            _buildActionButton(Icons.picture_as_pdf_outlined, "Print to PDF"),
-            const SizedBox(width: 12),
-            ElevatedButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.send_outlined, size: 18),
-              label: const Text("Send Estimate", style: TextStyle(fontWeight: FontWeight.bold)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFF97316),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
+            
+            // PDF BUTTON FIXED HERE
+            _buildActionButton(
+              Icons.picture_as_pdf_outlined, 
+              "Print to PDF",
+              // We use 'estimate' from the callback and 'business' from the top
+              onTap: () => generatePdf(estimate, null), 
             ),
+
+            const SizedBox(width: 12),
+           
           ],
         ),
       );
@@ -197,26 +196,61 @@ Widget _buildEditForm(BusinessModel? business, Map<String, dynamic> estimate) {
 
 Future<void> _saveChanges(Map<String, dynamic> estimate) async {
   final supabase = Supabase.instance.client;
+  final String uuid = estimate['reference'];
   final cust = estimate['customers'];
 
   try {
-    // 1. Update Customer (Name, Address, etc)
+    // 1. Update Customer
     await supabase.from('customers').update({
       'name': cust['name'],
       'email': cust['email'],
       'billing_address': cust['billing_address'],
+      'phone': cust['phone'], // Added phone from your schema
     }).eq('reference', estimate['customer_ref']);
 
-    // 2. Update Estimate (Notes, Totals)
+    // 2. Update Estimate
     await supabase.from('estimates').update({
       'notes': estimate['notes'],
-      'total': estimate['total'], // Make sure to recalculate this!
-    }).eq('reference', estimate['reference']);
+      'total': estimate['total'], 
+      'subtotal': estimate['subtotal'],
+    }).eq('reference', uuid);
 
-    // 3. Re-sync items (Delete & Insert as discussed before)
-    // ... items logic ...
+    // 3. Re-sync Line Items (Delete then Insert)
+    await supabase.from('estimate_items').delete().eq('estimate_ref', uuid);
+    
+    final List<dynamic> items = estimate['estimate_items'] ?? [];
+    if (items.isNotEmpty) {
+      await supabase.from('estimate_items').insert(
+        items.map((item) => {
+          'estimate_ref': uuid,
+          'business_ref': estimate['business_ref'], // Required by your schema
+          'description': item['description'],
+          'qty': item['qty'],
+          'rate': item['rate'],
+          'amount': (item['qty'] ?? 0) * (item['rate'] ?? 0),
+        }).toList(),
+      );
+    }
+
+    // 4. Success Feedback & State Cleanup
+    if (!mounted) return;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Estimate saved successfully")),
+    );
+
+    // Refresh the list provider so the dashboard shows new data
+    // (Replace 'estimatesProvider' with your actual list provider name)
+    ref.invalidate(singleEstimateProvider(uuid)); 
+
+    // 5. NAVIGATE BACK
+    context.go('/estimates');
+
   } catch (e) {
-    // handle error
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Error: $e"), backgroundColor: Colors.red),
+    );
   }
 }
   Widget _buildActionButton(IconData icon, String label, {VoidCallback? onTap}) {
@@ -236,7 +270,7 @@ Future<void> _saveChanges(Map<String, dynamic> estimate) async {
   Widget _buildMainDocument(BusinessModel? business, Map<String, dynamic> estimate) {
     // Extracting nested data for readability
   final customerMap = estimate['customers'] as Map<String, dynamic>? ?? {};
-    final itemsList = estimate['estimate_items'] as List<dynamic>? ?? [];
+    final itemsList = estimate['items'] as List<dynamic>? ?? [];
 
     return Container(
       width: 800, // Fixed width for document look
