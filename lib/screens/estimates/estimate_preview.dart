@@ -22,8 +22,37 @@ class EstimatePreview extends ConsumerStatefulWidget {
   ConsumerState<EstimatePreview> createState() => _EstimatePreviewState();
 }
 class _EstimatePreviewState extends ConsumerState<EstimatePreview> {
+BusinessModel? _currentBusiness;
 
+
+@override
+  void initState() {
+    super.initState();
+    // 2. Call your fetch method when the screen loads
+    _fetchBusinessData();
+  }
+
+//============FETCH COMPANY NAME=====================
+  Future<void> _fetchBusinessData() async {
+  try {
+    final response = await Supabase.instance.client
+        .from('business')
+        .select()
+        .maybeSingle(); // Gets one row or null
+
+    if (response != null) {
+      setState(() {
+        // This populates the variable and triggers a UI refresh
+        _currentBusiness = BusinessModel.fromMap(response);
+      });
+    }
+  } catch (e) {
+    debugPrint("Error loading business: $e");
+  }
+}
  @override
+
+ 
 Widget build(BuildContext context) {
   final businessAsync = ref.watch(businessProvider);
   final estimateAsync = ref.watch(singleEstimateProvider(widget.estimateId));
@@ -67,10 +96,6 @@ Widget build(BuildContext context) {
   // --- Top Action Bar ---
 Widget _buildTopActionBar(BuildContext context) {
   final estimateAsync = ref.watch(singleEstimateProvider(widget.estimateId));
-
-  // This 'business' variable is defined at the top scope of the method
-  final business = widget.estimateId;
-
   return estimateAsync.when(
     loading: () => const SizedBox.shrink(),
     error: (err, stack) => const Text("Error loading actions"),
@@ -114,7 +139,7 @@ Widget _buildTopActionBar(BuildContext context) {
               Icons.picture_as_pdf_outlined, 
               "Print to PDF",
               // We use 'estimate' from the callback and 'business' from the top
-              onTap: () => generatePdf(estimate, null), 
+              onTap: () => generatePdf(estimate, _currentBusiness), 
             ),
 
             const SizedBox(width: 12),
@@ -216,22 +241,68 @@ Future<void> _saveChanges(Map<String, dynamic> estimate) async {
     }).eq('reference', uuid);
 
     // 3. Re-sync Line Items (Delete then Insert)
-    await supabase.from('estimate_items').delete().eq('estimate_ref', uuid);
+   // await supabase.from('estimate_items').delete().eq('estimate_ref', uuid);
     
     final List<dynamic> items = estimate['estimate_items'] ?? [];
-    if (items.isNotEmpty) {
-      await supabase.from('estimate_items').insert(
-        items.map((item) => {
-          'estimate_ref': uuid,
-          'business_ref': estimate['business_ref'], // Required by your schema
+
+// 1️⃣ Get existing DB items (using id, not reference)
+final existingDbItems = await supabase
+    .from('estimate_items')
+    .select('id')
+    .eq('estimate_ref', uuid);
+
+final existingIds =
+    (existingDbItems as List).map((e) => e['id'] as int).toSet();
+
+final currentIds = <int>{};
+
+// 2️⃣ Update or Insert
+for (var item in items) {
+  if (item['id'] != null) {
+    currentIds.add(item['id']);
+
+    // 🔵 UPDATE existing
+    await supabase
+        .from('estimate_items')
+        .update({
           'description': item['description'],
           'qty': item['qty'],
           'rate': item['rate'],
           'amount': (item['qty'] ?? 0) * (item['rate'] ?? 0),
-        }).toList(),
-      );
-    }
+        })
+        .eq('id', item['id']);
+  } else {
+    // 🟢 INSERT new
+    final inserted = await supabase
+        .from('estimate_items')
+        .insert({
+          'estimate_ref': uuid,
+          'business_ref': estimate['business_ref'],
+          'item_ref': item['item_ref'],
+          'description': item['description'],
+          'qty': item['qty'],
+          'rate': item['rate'],
+          'amount': (item['qty'] ?? 0) * (item['rate'] ?? 0),
+        })
+        .select()
+        .single();
 
+    currentIds.add(inserted['id']);
+  }
+}
+
+// 3️⃣ Delete removed items
+final idsToDelete = existingIds.difference(currentIds);
+
+print("Delete these IDs: $idsToDelete");
+
+// 4️⃣ Delete removed
+if (idsToDelete.isNotEmpty) {
+  await supabase
+      .from('estimate_items')
+      .delete()
+      .inFilter('id', idsToDelete.toList());
+}
     // 4. Success Feedback & State Cleanup
     if (!mounted) return;
     
@@ -270,7 +341,7 @@ Future<void> _saveChanges(Map<String, dynamic> estimate) async {
   Widget _buildMainDocument(BusinessModel? business, Map<String, dynamic> estimate) {
     // Extracting nested data for readability
   final customerMap = estimate['customers'] as Map<String, dynamic>? ?? {};
-    final itemsList = estimate['items'] as List<dynamic>? ?? [];
+    final itemsList = estimate['estimate_items'] as List<dynamic>? ?? [];
 
     return Container(
       width: 800, // Fixed width for document look
@@ -295,7 +366,7 @@ Future<void> _saveChanges(Map<String, dynamic> estimate) async {
           ),
           
           Padding(
-            padding: const EdgeInsets.all(60.0), // Generous document padding
+            padding: const EdgeInsets.all(60.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -334,44 +405,46 @@ Widget _buildDocHeader(BusinessModel? business, Map<String, dynamic> estimate) {
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       // Left Side: Business Branding
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Dynamic Logo with fallback
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.black,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: (business?.logoUrl != null && business!.logoUrl!.isNotEmpty)
-                ? Image.network(
-                    business.logoUrl!,
-                    width: 24,
-                    height: 24,
-                    errorBuilder: (context, error, stackTrace) => 
-                        const Icon(Icons.architecture, color: Colors.white, size: 24),
-                  )
-                : const Icon(Icons.architecture, color: Colors.white, size: 24),
-          ),
-          const SizedBox(height: 12),
-          
-          // Business Name
-          Text(
-            business?.name ?? "Your Business Name", 
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-          ),
-          
-          // Business Info (Address/GST)
-          if (business?.info != null && business!.info!.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                business.info!,
-                style: const TextStyle(fontSize: 12, color: Colors.grey, height: 1.4),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Dynamic Logo with fallback
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(4),
               ),
+              child: (business?.logoUrl != null && business!.logoUrl!.isNotEmpty)
+                  ? Image.network(
+                      business.logoUrl!,
+                      width: 24,
+                      height: 24,
+                      errorBuilder: (context, error, stackTrace) => 
+                          const Icon(Icons.architecture, color: Colors.white, size: 24),
+                    )
+                  : const Icon(Icons.architecture, color: Colors.white, size: 24),
             ),
-        ],
+            const SizedBox(height: 12),
+            
+            // Business Name
+            Text(
+              business?.name ?? "Your Business Name", 
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+            
+            // Business Info (Address/GST)
+            if (business?.info != null && business!.info!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  business.info!,
+                  style: const TextStyle(fontSize: 12, color: Colors.grey, height: 1.4),
+                ),
+              ),
+          ],
+        ),
       ),
       
       // Right Side: Estimate Details
@@ -478,7 +551,7 @@ Widget _buildLineItemsTable(List<dynamic> items) {
       else
         ...items.map((item) {
           return _buildItemRow(
-            item['item_name'] ?? 'Untitled Item',
+           
             item['description'] ?? '',
             "${item['qty'] ?? 0}",
             "\$${item['rate']?.toStringAsFixed(2) ?? '0.00'}",
@@ -489,7 +562,7 @@ Widget _buildLineItemsTable(List<dynamic> items) {
   );
 }
 
-  Widget _buildItemRow(String title, String desc, String qty, String rate, String amount) {
+  Widget _buildItemRow( String desc, String qty, String rate, String amount) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 24),
       decoration: BoxDecoration(
@@ -503,9 +576,9 @@ Widget _buildLineItemsTable(List<dynamic> items) {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                Text(desc, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                 const SizedBox(height: 4),
-                Text(desc, style: TextStyle(fontSize: 12, color: Colors.grey.shade600, height: 1.4)),
+               
               ],
             ),
           ),

@@ -421,15 +421,7 @@ class TableRowItem extends ConsumerWidget {
 
                   // 3. Build the menu items
                   itemBuilder: (BuildContext context) => [
-                    const PopupMenuItem<String>(
-                      value: 'edit',
-                      child: ListTile(
-                        leading: Icon(Icons.edit, size: 18, color: Colors.blue),
-                        title: Text('Edit', style: TextStyle(fontSize: 14)),
-                        contentPadding: EdgeInsets.zero,
-                        dense: true,
-                      ),
-                    ),
+                   
                     const PopupMenuItem<String>(
                       value: 'delete',
                       child: ListTile(
@@ -515,10 +507,7 @@ class TableFooter extends StatelessWidget {
       height: 56,
       alignment: Alignment.centerLeft,
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: const Text(
-        "Showing 5 of 24 estimates",
-        style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
-      ),
+     
     );
   }
 }

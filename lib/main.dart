@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:billing_software/auth/login.dart';
 import 'package:billing_software/screens/estimates/add_estimate.dart';
 import 'package:billing_software/screens/estimates/estimate_preview.dart';
@@ -30,6 +32,7 @@ void main() async {
 
 // 3. Move GoRouter outside of the build method to prevent route resets on rebuild
 final _router = GoRouter(
+  refreshListenable: GoRouterRefreshStream(supabase.auth.onAuthStateChange),
   initialLocation: '/login',
   redirect: (context, state) {
   final session = supabase.auth.currentSession;
@@ -93,6 +96,21 @@ final _router = GoRouter(
   ],
 );
 
+
+class GoRouterRefreshStream extends ChangeNotifier {
+  GoRouterRefreshStream(Stream<dynamic> stream) {
+    notifyListeners();
+    _subscription = stream.asBroadcastStream().listen((_) => notifyListeners());
+  }
+
+  late final StreamSubscription<dynamic> _subscription;
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 

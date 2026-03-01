@@ -1,3 +1,5 @@
+import 'package:billing_software/core/supabase_client.dart';
+import 'package:billing_software/screens/estimates/estimate.dart';
 import 'package:billing_software/screens/items/modules/item_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +16,8 @@ class CreateEstimate extends ConsumerStatefulWidget {
 }
 
 class _CreateEstimateState extends ConsumerState<CreateEstimate> {
+
+
   // Fixed widths for pixel-perfect table alignment
   static const double _qtyWidth = 100.0;
   static const double _rateWidth = 140.0;
@@ -28,7 +32,9 @@ class _CreateEstimateState extends ConsumerState<CreateEstimate> {
   final _notesController = TextEditingController();
   final _termsController = TextEditingController();
   final _estimateNumberController = TextEditingController(text: "EST-2024-002");
-  final _referenceController = TextEditingController();
+  // final _referenceController = TextEditingController();
+  late TextEditingController _estimateDateController;
+  late TextEditingController _expiryDateController;
 
   final List<LineItem> _items = [
     LineItem(description: "UI/UX Design - Dashboard Mobile App", qty: 40, rate: 85),
@@ -41,7 +47,20 @@ class _CreateEstimateState extends ConsumerState<CreateEstimate> {
   double get _subtotal => _items.fold(0, (sum, item) => sum + item.total);
   double get _totalAmount => _subtotal - _totalDiscount;
 
-  void _addNewItem() {
+
+@override
+void initState() {
+  super.initState();
+  _items.clear(); 
+  _items.add(LineItem(description: "", qty: 1, rate: 0));
+  _estimateDateController = TextEditingController(text: "01/03/2026");
+    _expiryDateController = TextEditingController(text: "31/03/2026");
+  
+  _fetchItems();
+}
+
+//============ADD ITEMS========================
+void _addNewItem() {
     setState(() {
       _items.add(LineItem(description: "", qty: 1, rate: 0));
     });
@@ -49,34 +68,21 @@ class _CreateEstimateState extends ConsumerState<CreateEstimate> {
    List<ItemModel> _availableItems = [];
   bool _isLoadingItems = true;
 
+//=======================FETCH ITEMS================================
 Future<void> _fetchItems() async {
-  final supabase = Supabase.instance.client;
-
+  setState(() => _isLoadingItems = true); // Start loading
   try {
-    // 🔥 Get business reference first
-    final businessData = await supabase
-        .from('business')
-        .select('reference')
-        .limit(1)
-        .single();
-
-    final businessRef = businessData['reference'];
-
-    // 🔥 Fetch only this business items
-    final response = await supabase
-        .from('items')
-        .select()
-        .eq('business_ref', businessRef)
-        .order('item_name');
-
+    final data = await supabase.from('items').select();
     setState(() {
-      _availableItems =
-          (response as List).map((e) => ItemModel.fromMap(e)).toList();
-      _isLoadingItems = false;
+      _availableItems = (data as List).map((e) => ItemModel.fromMap(e)).toList();
     });
   } catch (e) {
-    setState(() => _isLoadingItems = false);
+    debugPrint("Error fetching items: $e");
+  } finally {
+    // 🔥 CRITICAL: This must run even if there's an error
+    setState(() => _isLoadingItems = false); 
   }
+
 }
   // --- FIXED SAVE LOGIC ---
  Future<void> _handleSave() async {
@@ -138,7 +144,7 @@ if (existingCustomer != null) {
 
     // 4. Create Model
     final estimate = EstimateModel(
-      reference: _referenceController.text.isEmpty ? null : _referenceController.text,
+     // reference: _referenceController.text.isEmpty ? null : _referenceController.text,
       estimateNumber: _estimateNumberController.text,
       customerName: _customerNameController.text,
       customerPhone: _phoneController.text,
@@ -166,6 +172,7 @@ if (existingCustomer != null) {
         const SnackBar(content: Text("Estimate saved successfully!"), backgroundColor: Colors.green),
       );
     }
+    Navigator.push(context,MaterialPageRoute(builder: (context)=>EstimateDashboard()));
   } catch (e) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -177,6 +184,23 @@ if (existingCustomer != null) {
   }
 }
 
+//========================= CALENDER==============================//
+
+Future<void> _selectDate(BuildContext context, TextEditingController controller) async {
+  final DateTime? picked = await showDatePicker(
+    context: context,
+    initialDate: DateTime.now(),
+    firstDate: DateTime(2000),
+    lastDate: DateTime(2101),
+  );
+
+  if (picked != null) {
+    setState(() {
+      // Formats date as DD/MM/YYYY to match your current UI
+      controller.text = "${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}";
+    });
+  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -233,16 +257,7 @@ if (existingCustomer != null) {
         ),
         Row(
           children: [
-            OutlinedButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.remove_red_eye_outlined, size: 18, color: Colors.blueGrey),
-              label: const Text("Preview", style: TextStyle(color: Colors.blueGrey)),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-                side: BorderSide(color: Colors.grey.shade300),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-            ),
+           
             const SizedBox(width: 12),
             ElevatedButton(
               onPressed: _isSaving ? null : _handleSave, // Disable while saving
@@ -314,15 +329,24 @@ if (existingCustomer != null) {
       child: Column(
         children: [
           _buildLogisticsField("ESTIMATE NUMBER", _estimateNumberController),
-          _buildLogisticsField("ESTIMATE DATE", TextEditingController(text: "20/05/2024"), icon: Icons.calendar_today),
-          _buildLogisticsField("EXPIRY DATE", TextEditingController(text: "20/06/2024"), icon: Icons.calendar_today),
-          _buildLogisticsField("REFERENCE #", _referenceController),
+          _buildLogisticsField(
+  "ESTIMATE DATE", 
+  _estimateDateController, // Use a persistent controller defined in your State
+  icon: Icons.calendar_today,
+  onTap: () => _selectDate(context, _estimateDateController),
+),
+          _buildLogisticsField("EXPIRY DATE",  _expiryDateController, // Use a persistent controller defined in your State
+  icon: Icons.calendar_today,
+  onTap: () => _selectDate(context, _expiryDateController),
+),
+         // _buildLogisticsField("REFERENCE #", _referenceController),
         ],
       ),
     );
   }
 
   Widget _buildLineItemsSection() {
+    
     return Container(
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)),
       child: Column(
@@ -332,13 +356,16 @@ if (existingCustomer != null) {
           const Divider(height: 1),
           _buildTableHeader(),
           const Divider(height: 1),
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _items.length,
-            separatorBuilder: (context, index) => const Divider(height: 1),
-            itemBuilder: (context, index) => _buildItemRow(index),
-          ),
+         // If the whole list is waiting for data, show one big loader instead
+_isLoadingItems 
+  ? const Center(child: CircularProgressIndicator())
+  : ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _items.length,
+      itemBuilder: (context, index) => _buildItemRow(index),
+      separatorBuilder: (context, index) => const Divider(),
+    ),
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextButton.icon(
@@ -372,6 +399,10 @@ if (existingCustomer != null) {
 Widget _buildItemRow(int index) {
   final item = _items[index];
 
+  // Safety check: ensure the value exists in the list or is null
+  final bool valueExists = _availableItems.any((itm) => itm.reference == item.itemRef);
+  final String? dropdownValue = valueExists ? item.itemRef : null;
+
   return Padding(
     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
     child: Row(
@@ -393,30 +424,21 @@ Widget _buildItemRow(int index) {
               : DropdownButtonFormField<String>(
                   value: item.itemRef,
                   isExpanded: true,
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
+                decoration: const InputDecoration(
+                    // Use a visible border temporarily to debug
+                    border: OutlineInputBorder(), 
+                    contentPadding: EdgeInsets.symmetric(horizontal: 10),
                     hintText: "Select Item",
                   ),
                   items: _availableItems.map((itm) {
                     return DropdownMenuItem<String>(
                       value: itm.reference,
-                      child: Row(
-                        children: [
-                          Expanded(child: Text(itm.name)),
-                          Text(
-                            "₹${itm.rate}",
-                            style: const TextStyle(color: Colors.grey),
-                          ),
-                        ],
-                      ),
+                     child: Text(itm.name),
                     );
                   }).toList(),
-                  onChanged: (value) {
+                 onChanged: (value) {
                     if (value == null) return;
-
-                    final selectedItem =
-                        _availableItems.firstWhere((e) => e.reference == value);
-
+                    final selectedItem = _availableItems.firstWhere((e) => e.reference == value);
                     setState(() {
                       item.itemRef = selectedItem.reference;
                       item.description = selectedItem.name;
@@ -508,19 +530,26 @@ Widget _buildItemRow(int index) {
     );
   }
 
-  Widget _buildLogisticsField(String label, TextEditingController controller, {IconData? icon}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
-          const SizedBox(height: 4),
-          TextField(controller: controller, decoration: _inputDecoration("").copyWith(suffixIcon: icon != null ? Icon(icon, size: 16) : null)),
-        ],
-      ),
-    );
-  }
+Widget _buildLogisticsField(String label, TextEditingController controller, {IconData? icon, VoidCallback? onTap}) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
+        const SizedBox(height: 4),
+        TextField(
+          controller: controller,
+          readOnly: false, // 🔥 This stops the keyboard from appearing
+          onTap: onTap,    // 🔥 This triggers the calendar
+          decoration: _inputDecoration("").copyWith(
+            suffixIcon: icon != null ? Icon(icon, size: 16) : null,
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _summaryRow(String label, String value) {
     return Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(label), Text(value, style: const TextStyle(fontWeight: FontWeight.bold))]);

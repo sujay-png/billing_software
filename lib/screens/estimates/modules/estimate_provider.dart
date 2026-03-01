@@ -44,13 +44,16 @@ class EstimateNotifier extends AsyncNotifier<void> {
   }
 
   Future<void> deleteEstimate(String reference) async {
-    state = const AsyncLoading();
+  state = const AsyncLoading();
 
-    // Use guard to catch errors and update state automatically
-    state = await AsyncValue.guard(() async {
-      await _repository.deleteEstimate(reference);
-    });
-  }
+  state = await AsyncValue.guard(() async {
+    await _repository.deleteEstimate(reference);
+    
+    // 🔥 Trigger a refresh of the current provider's data 
+    // after a successful deletion.
+    ref.invalidateSelf(); 
+  });
+}
 }
 
 
@@ -78,14 +81,19 @@ Future<void> generatePdf(Map<String, dynamic> estimate, BusinessModel? business)
                   business?.name ?? "Business Name", 
                   style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)
                 ),
+               
                 pw.Text(
                   "ESTIMATE: ${estimate['estimate_number'] ?? 'N/A'}", 
                   style: pw.TextStyle(fontSize: 14)
                 ),
               ],
             ),
+              pw.Text(
+                  business?.info ?? "ADDRESS", 
+                  style: pw.TextStyle(fontSize: 14,)
+                ),
             pw.SizedBox(height: 20),
-            
+           
             // Customer Info
             pw.Text("BILL TO:", style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
             pw.Text(estimate['customers']?['name'] ?? "No Customer Name"),
@@ -144,10 +152,14 @@ final singleEstimateProvider = FutureProvider.family<Map<String, dynamic>, Strin
   final response = await supabase
       .from('estimates')
       .select('''
-        *,
-        customers!estimates_customer_fk (*),
-        estimate_items (*)
-      ''')
+  *,
+  customers(*),
+  business(*),
+  estimate_items(
+    *,
+    items(*)
+  )
+''')
       // Ensure 'id' here is the actual UUID (e.g. from your routing)
       // If you MUST query by Estimate Number, change the column name below to 'estimate_number'
       .eq('reference', id) 

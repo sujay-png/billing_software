@@ -15,7 +15,7 @@ class _LoginPageState extends State<LoginPage> {
   final passwordcontroller = TextEditingController();
   bool isLogin = true;
   bool isLoading = false;
-bool _isPasswordVisible = false;
+  bool _isPasswordVisible = false;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -68,42 +68,6 @@ bool _isPasswordVisible = false;
                 ),
               ),
 
-              const SizedBox(height: 20),
-
-             Container(
-  width: 400,
-  decoration: BoxDecoration(
-    color: Colors.white,
-    borderRadius: BorderRadius.circular(12),
-    border: Border.all(color: Colors.grey.shade300),
-  ),
-  child: TextField(
-    controller: passwordcontroller,
-    // This is the key property for hiding text
-    obscureText: !_isPasswordVisible, 
-    decoration: InputDecoration(
-      hintText: "Enter Your Password",
-      hintStyle: const TextStyle(color: Colors.grey),
-      border: InputBorder.none,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 14,
-      ),
-      // Adding a toggle icon on the right side
-      suffixIcon: IconButton(
-        icon: Icon(
-          _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
-          color: Colors.grey,
-        ),
-        onPressed: () {
-          setState(() {
-            _isPasswordVisible = !_isPasswordVisible;
-          });
-        },
-      ),
-    ),
-  ),
-),
               const SizedBox(height: 6),
 
               Container(
@@ -115,20 +79,34 @@ bool _isPasswordVisible = false;
                 ),
                 child: TextField(
                   controller: passwordcontroller,
-                  obscureText: true,
+                  // This is the key property for hiding text
+                  obscureText: !_isPasswordVisible,
                   decoration: InputDecoration(
                     hintText: "Enter Your Password",
-                    hintStyle: TextStyle(color: Colors.grey),
+                    hintStyle: const TextStyle(color: Colors.grey),
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(
+                    contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 14,
+                    ),
+                    // Adding a toggle icon on the right side
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _isPasswordVisible
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                        color: Colors.grey,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _isPasswordVisible = !_isPasswordVisible;
+                        });
+                      },
                     ),
                   ),
                 ),
               ),
 
-              const SizedBox(height: 12),
               const SizedBox(width: 12),
 
               // Row(

@@ -1,4 +1,6 @@
+import 'package:billing_software/core/supabase_client.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
@@ -210,7 +212,7 @@ final filteredItems = items.where((item) {
                   separatorBuilder: (context, index) =>
                       const Divider(height: 1),
                   itemBuilder: (context, index) {
-                    final item = items[index];
+                    final item = filteredItems[index];
                     final int stock = item['stock'] ?? 0;
 
                     String statusLabel = "Out of Stock ($stock)";
@@ -280,6 +282,9 @@ class AddItemScreen extends StatefulWidget {
 }
 
 class _AddItemScreenState extends State<AddItemScreen> {
+ 
+
+  
   String _itemName = '';
   String _sku = '';
   String _category = '';
@@ -291,6 +296,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
   @override
   void initState() {
     super.initState();
+  
     
     if (widget.existingItem != null) {
       _itemName = widget.existingItem!['item_name'] ?? '';
@@ -303,7 +309,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
   }
 
   //=============Save Logic====================//
-  Future<void> _handleSave() async {
+ Future<void> _handleSave() async {
   if (_itemName.trim().isEmpty) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Item name is required")),
@@ -315,16 +321,16 @@ class _AddItemScreenState extends State<AddItemScreen> {
 
   try {
     if (widget.existingItem != null) {
-      await _updateItem();   // 🔥 EDIT
+      await _updateItem();
     } else {
-      await _insertItem();   // 🔥 INSERT
+      await _insertItem();
     }
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Item saved successfully!")),
       );
-      Navigator.pop(context);
+   context.go('/items');
     }
   } catch (e) {
     debugPrint("Save Error: $e");
@@ -339,32 +345,17 @@ class _AddItemScreenState extends State<AddItemScreen> {
 }
 
 Future<void> _updateItem() async {
-  final client = Supabase.instance.client;
-  
-  try {
-    // Show a loading indicator if you have one
-    await client
-        .from('items')
-        .update({
-          'item_name': _itemName.trim(),
-          'sku': _sku.trim().isEmpty ? null : _sku.trim(),
-          'category': _category.trim().isEmpty ? null : _category.trim(),
-          'description': _description.trim().isEmpty ? null : _description.trim(),
-          'rate': _rate,
-          'stock': _stock,
-        })
-        .eq('id', widget.existingItem!['id']); // Removed int.parse for better compatibility
-
-    if (mounted) {
-      // Return 'true' to tell the previous screen that we actually updated something
-      Navigator.of(context).pop(true); 
-    }
-  } catch (e) {
-    debugPrint("Update error: $e");
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Error updating item: $e")),
-    );
-  }
+  await Supabase.instance.client
+      .from('items')
+      .update({
+        'item_name': _itemName,
+        'sku':_sku,
+        'category': _category,
+        'description':_description,
+        'rate': _rate,  
+        'stock': _stock
+      })
+      .eq('id', widget.existingItem!['id']);
 }
 Future<void> _insertItem() async {
   final client = Supabase.instance.client;
@@ -774,15 +765,21 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 }
 
-class _InventoryRow extends StatelessWidget {
+class _InventoryRow extends StatefulWidget {
   final Map<String, dynamic> itemData;
+
   final Color statusColor;
 
   const _InventoryRow({required this.itemData, required this.statusColor});
 
   @override
+  State<_InventoryRow> createState() => _InventoryRowState();
+}
+
+class _InventoryRowState extends State<_InventoryRow> {
+  @override
   Widget build(BuildContext context) {
-    final int stock = itemData['stock'] ?? 0;
+    final int stock = widget.itemData['stock'] ?? 0;
     final String statusText = stock <= 0
         ? "Out of Stock"
         : stock < 10
@@ -796,7 +793,7 @@ class _InventoryRow extends StatelessWidget {
           SizedBox(
             width: 100,
             child: Text(
-              itemData['sku'] ?? 'N/A',
+              widget.itemData['sku'] ?? 'N/A',
               style: const TextStyle(color: Color(0xFF64748B), fontSize: 13),
             ),
           ),
@@ -804,7 +801,7 @@ class _InventoryRow extends StatelessWidget {
           Expanded(
             flex: 3,
             child: Text(
-              itemData['item_name'] ?? 'Untitled',
+              widget.itemData['item_name'] ?? 'Untitled',
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF1E293B),
@@ -815,7 +812,7 @@ class _InventoryRow extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              itemData['category'] ?? 'NA',
+              widget.itemData['category'] ?? 'NA',
               style: const TextStyle(fontSize: 11, color: Colors.blueGrey),
             ),
           ),
@@ -823,7 +820,7 @@ class _InventoryRow extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              itemData['description'] ?? 'NA',
+              widget.itemData['description'] ?? 'NA',
               style: const TextStyle(fontSize: 11, color: Colors.blueGrey),
             ),
           ),
@@ -831,7 +828,7 @@ class _InventoryRow extends StatelessWidget {
           SizedBox(
             width: 120,
             child: Text(
-              "₹${itemData['rate'] ?? 0}",
+              "₹${widget.itemData['rate'] ?? 0}",
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF1E293B),
@@ -843,13 +840,13 @@ class _InventoryRow extends StatelessWidget {
             flex: 2,
             child: Row(
               children: [
-                CircleAvatar(radius: 4, backgroundColor: statusColor),
+                CircleAvatar(radius: 4, backgroundColor: widget.statusColor),
                 const SizedBox(width: 8),
                 Text(
                   "$stock $statusText",
                   style: TextStyle(
                     fontSize: 13,
-                    color: statusColor,
+                    color: widget.statusColor,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -864,16 +861,18 @@ class _InventoryRow extends StatelessWidget {
               children: [
                 // EDIT
                 GestureDetector(
-                 onTap: () async {
-  // Wait for the user to come back from the Edit screen
-  await Navigator.of(context).push(
+               onTap: () async {
+  final didUpdate = await Navigator.of(context).push(
     MaterialPageRoute(
-      builder: (_) => AddItemScreen(existingItem: itemData),
+      builder: (_) => AddItemScreen(existingItem: widget.itemData),
     ),
   );
   
-  // Refresh your data here!
-  // Example: ref.invalidate(itemsProvider); or setState((){});
+  if (didUpdate == true) {
+    // Rebuild parent to refresh StreamBuilder
+    if (context.mounted) setState(() {});
+  }
+  
 },
                   child: const Icon(
                     Icons.edit_outlined,
@@ -892,7 +891,7 @@ class _InventoryRow extends StatelessWidget {
                       builder: (context) => AlertDialog(
                         title: const Text("Delete Item"),
                         content: Text(
-                          "Are you sure you want to delete '${itemData['item_name']}'?",
+                          "Are you sure you want to delete '${widget.itemData['item_name']}'?",
                         ),
                         actions: [
                           TextButton(
@@ -914,7 +913,7 @@ class _InventoryRow extends StatelessWidget {
                       await Supabase.instance.client
                           .from('items')
                           .delete()
-                          .eq('id', itemData['id']);
+                          .eq('id', widget.itemData['id']);
                     }
                   },
                   child: const Icon(

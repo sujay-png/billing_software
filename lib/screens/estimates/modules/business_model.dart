@@ -16,11 +16,12 @@ class BusinessModel {
   });
 
   factory BusinessModel.fromMap(Map<String, dynamic> map) {
+    print("Mapping Business Data: $map");
     return BusinessModel(
       // Maps to 'reference' uuid column
       reference: map['reference'] ?? '', 
       // Maps to 'business_name' text column
-      name: map['business_name'] ?? 'Unnamed Business', 
+      name: map['business_name']?.toString().trim() ?? 'Unnamed Business',
       // Maps to 'business_phone' text column
       phone: map['business_phone'],
       // Maps to 'business_gst' text column
