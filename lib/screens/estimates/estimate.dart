@@ -285,8 +285,8 @@ class EstimatesTable extends ConsumerWidget {
                           est['estimate_number'] ?? 'N/A',
                           est['reference'] ?? '',
                           est['customer_name'] ?? 'N/A',
-                          "\$${est['total']}",
-                          est['status'] ?? 'Draft',
+                          "\$${est['total']}"
+                          
                         ),
                         const Divider(height: 1),
                       ],
@@ -322,7 +322,6 @@ class TableHeader extends StatelessWidget {
           Expanded(flex: 2, child: HeaderText("ESTIMATE #")),
           Expanded(flex: 3, child: HeaderText("CUSTOMER")),
           Expanded(flex: 2, child: HeaderText("AMOUNT")),
-          Expanded(flex: 2, child: HeaderText("STATUS")),
           Expanded(flex: 1, child: HeaderText("ACTIONS")),
         ],
       ),
@@ -349,7 +348,7 @@ class HeaderText extends StatelessWidget {
 }
 
 class TableRowItem extends ConsumerWidget {
-  final String date, id, reference, customer, amount, status;
+  final String date, id, reference, customer, amount;
 
   const TableRowItem(
     this.date,
@@ -357,7 +356,7 @@ class TableRowItem extends ConsumerWidget {
     this.reference,
     this.customer,
     this.amount,
-    this.status, {
+     {
     super.key,
   });
 
@@ -388,13 +387,7 @@ class TableRowItem extends ConsumerWidget {
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
-            Expanded(
-              flex: 2,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: StatusBadge(status: status),
-              ),
-            ),
+           
             Expanded(
               flex: 1,
               child: Align(
@@ -449,54 +442,7 @@ class TableRowItem extends ConsumerWidget {
   }
 }
 
-class StatusBadge extends StatelessWidget {
-  final String status;
 
-  const StatusBadge({super.key, required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    Color bgColor;
-    Color textColor;
-
-    switch (status.toLowerCase()) {
-      case 'sent':
-        bgColor = const Color(0xFFE0E7FF);
-        textColor = const Color(0xFF1D4ED8);
-        break;
-      case 'accepted':
-        bgColor = const Color(0xFFD1FAE5);
-        textColor = const Color(0xFF065F46);
-        break;
-      case 'declined':
-        bgColor = const Color(0xFFFEE2E2);
-        textColor = const Color(0xFF991B1B);
-        break;
-      default:
-        bgColor = const Color(0xFFF3F4F6);
-        textColor = const Color(0xFF374151);
-    }
-
-    return Align(
-      alignment: Alignment.centerLeft, // important
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          status,
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: textColor,
-            fontSize: 13,
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class TableFooter extends StatelessWidget {
   const TableFooter({super.key});

@@ -177,7 +177,7 @@ Widget _buildEditForm(BusinessModel? business, Map<String, dynamic> estimate) {
               children: [
                 Expanded(child: _buildField("Customer Name", customer['name'], (val) => customer['name'] = val)),
                 const SizedBox(width: 16),
-                Expanded(child: _buildField("Email", customer['email'], (val) => customer['email'] = val)),
+               
               ],
             ),
             const SizedBox(height: 16),
@@ -510,7 +510,6 @@ Widget _buildBillToSection(CustomerModel? customer, Map<String, dynamic> details
           // Address, Email, and Phone
           Text(
             "${details['billing_address'] ?? 'No Address'}\n"
-            "${details['email'] ?? ''}\n"
             "${details['phone'] ?? ''}", 
             style: const TextStyle(
               fontSize: 13, 
