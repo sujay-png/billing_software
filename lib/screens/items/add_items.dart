@@ -177,10 +177,10 @@ class _ItemsDashboardState extends State<ItemsDashboard> {
           _buildTableHeader(),
           const Divider(height: 1),
           Expanded(
-           child: FutureBuilder<List<Map<String, dynamic>>>(
-  future: Supabase.instance.client
+           child:StreamBuilder<List<Map<String, dynamic>>>(
+  stream: Supabase.instance.client
       .from('items')
-      .select()
+      .stream(primaryKey: ['id'])
       .order('created_at', ascending: false),
   builder: (context, snapshot) {
     if (snapshot.connectionState == ConnectionState.waiting) {
@@ -191,15 +191,12 @@ class _ItemsDashboardState extends State<ItemsDashboard> {
       return Center(child: Text("Error: ${snapshot.error}"));
     }
 
-    final items = (snapshot.data ?? []) as List<Map<String, dynamic>>;
+    final items = snapshot.data ?? [];
 
     final filteredItems = items.where((item) {
-      final name =
-          (item['item_name'] ?? "").toString().toLowerCase();
-      final sku =
-          (item['sku'] ?? "").toString().toLowerCase();
-      final category =
-          (item['category'] ?? "").toString().toLowerCase();
+      final name = (item['item_name'] ?? "").toString().toLowerCase();
+      final sku = (item['sku'] ?? "").toString().toLowerCase();
+      final category = (item['category'] ?? "").toString().toLowerCase();
 
       return name.contains(_searchQuery.toLowerCase()) ||
           sku.contains(_searchQuery.toLowerCase()) ||
@@ -213,8 +210,7 @@ class _ItemsDashboardState extends State<ItemsDashboard> {
     return ListView.separated(
       padding: EdgeInsets.zero,
       itemCount: filteredItems.length,
-      separatorBuilder: (context, index) =>
-          const Divider(height: 1),
+      separatorBuilder: (context, index) => const Divider(height: 1),
       itemBuilder: (context, index) {
         final item = filteredItems[index];
         final int stock = item['stock'] ?? 0;
@@ -222,8 +218,7 @@ class _ItemsDashboardState extends State<ItemsDashboard> {
         Color statusColor = Colors.red;
 
         if (stock > 0) {
-          statusColor =
-              stock < 10 ? Colors.orange : Colors.green;
+          statusColor = stock < 10 ? Colors.orange : Colors.green;
         }
 
         return _InventoryRow(
@@ -233,8 +228,7 @@ class _ItemsDashboardState extends State<ItemsDashboard> {
       },
     );
   },
-),
-          ),
+),  ),
         ],
       ),
     );
@@ -917,11 +911,11 @@ class _InventoryRowState extends State<_InventoryRow> {
                       await Supabase.instance.client
                           .from('items')
                           .delete()
-                          .eq('id', widget.itemData['id'])
-                          .select();
-                           if (mounted) {
-    setState(() {}); 
+                          .eq('id', widget.itemData['id']);
+                            if (mounted) {
+    setState(() {});
   }
+                        
                     }
                   },
                   child: const Icon(

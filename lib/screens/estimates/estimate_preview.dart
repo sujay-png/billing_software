@@ -305,17 +305,11 @@ if (idsToDelete.isNotEmpty) {
 }
     // 4. Success Feedback & State Cleanup
     if (!mounted) return;
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Estimate saved successfully")),
-    );
-
-    // Refresh the list provider so the dashboard shows new data
-    // (Replace 'estimatesProvider' with your actual list provider name)
     ref.invalidate(singleEstimateProvider(uuid)); 
 
-    // 5. NAVIGATE BACK
-    context.go('/estimates');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Estimate saved successfully")),
+    );   
 
   } catch (e) {
     if (!mounted) return;
