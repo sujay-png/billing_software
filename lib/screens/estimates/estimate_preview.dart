@@ -209,7 +209,7 @@ Widget _buildEditForm(BusinessModel? business, Map<String, dynamic> estimate) {
               int index = entry.key;
               var item = entry.value;
               return _buildEditableItemRow(item, onDelete: () => setState(() => items.removeAt(index)));
-            }).toList(),
+            }),
           ],
         ),
       ),
@@ -554,9 +554,9 @@ Widget _buildLineItemsTable(List<dynamic> items) {
             item['description'] ?? '',
             "${item['qty'] ?? 0}",
             "\$${item['rate']?.toStringAsFixed(2) ?? '0.00'}",
-            "\$${item['amount']?.toStringAsFixed(2) ?? '0.00'}",
+            "₹${item['amount']?.toStringAsFixed(2) ?? '0.00'}",
           );
-        }).toList(),
+        }),
     ],
   );
 }
@@ -591,7 +591,7 @@ Widget _buildLineItemsTable(List<dynamic> items) {
 
 Widget _buildTotalsSection(Map<String, dynamic> estimate) {
   // Helper to format currency
-  String format(dynamic value) => "\$${(value ?? 0).toStringAsFixed(2)}";
+  String format(dynamic value) => "₹${(value ?? 0).toStringAsFixed(2)}";
 
   return Align(
     alignment: Alignment.centerRight,

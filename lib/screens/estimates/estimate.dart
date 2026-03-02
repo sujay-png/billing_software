@@ -285,14 +285,14 @@ class EstimatesTable extends ConsumerWidget {
                           est['estimate_number'] ?? 'N/A',
                           est['reference'] ?? '',
                           est['customer_name'] ?? 'N/A',
-                          "\$${est['total']}"
+                            "₹${est['total']}"
                           
                         ),
                         const Divider(height: 1),
                       ],
                     ),
                   )
-                  .toList(),
+                  ,
               const TableFooter(),
             ],
           );

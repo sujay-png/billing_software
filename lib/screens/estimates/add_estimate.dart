@@ -422,7 +422,7 @@ Widget _buildItemRow(int index) {
                   ),
                 )
               : DropdownButtonFormField<String>(
-                  value: item.itemRef,
+                  initialValue: item.itemRef,
                   isExpanded: true,
                 decoration: const InputDecoration(
                     // Use a visible border temporarily to debug
