@@ -517,10 +517,20 @@ void _confirmDelete(BuildContext context, WidgetRef ref, String refId) {
           child: const Text("Cancel"),
         ),
         TextButton(
-          onPressed: () async {
-            await ref.read(estimateProvider.notifier).deleteEstimate(refId);
-            Navigator.pop(ctx);
-          },
+        onPressed: () async {
+  Navigator.pop(ctx); // Close dialog first
+
+  await ref.read(estimateProvider.notifier).deleteEstimate(refId);
+  ref.invalidate(estimatesListProvider); 
+  
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text("Estimate deleted successfully"),
+      backgroundColor: Colors.red,
+    ),
+  );
+},
           child: const Text("Delete", style: TextStyle(color: Colors.red)),
         ),
       ],

@@ -7,5 +7,6 @@ final estimatesListProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
   return supabase
     .from('estimate_summary')
     .stream(primaryKey: ['id']) 
+    .order('created_at', ascending: false)
     .map((data) => data.toList());
 });

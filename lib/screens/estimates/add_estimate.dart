@@ -1,5 +1,6 @@
 import 'package:billing_software/core/supabase_client.dart';
 import 'package:billing_software/screens/estimates/estimate.dart';
+import 'package:billing_software/screens/estimates/modules/estimatelist_Provider.dart';
 import 'package:billing_software/screens/items/modules/item_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -166,13 +167,18 @@ if (existingCustomer != null) {
       businessRef: businessRef,
       customerRef: customerRef,
     );
+    ref.invalidate(estimatesListProvider);
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Estimate saved successfully!"), backgroundColor: Colors.green),
       );
     }
-    Navigator.push(context,MaterialPageRoute(builder: (context)=>EstimateDashboard()));
+   Navigator.of(context).pushAndRemoveUntil(
+    MaterialPageRoute(builder: (context) => const EstimateDashboard()),
+    (route) => false,
+  );
+  ref.invalidate(estimatesListProvider);
   } catch (e) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

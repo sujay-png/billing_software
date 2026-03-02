@@ -42,17 +42,11 @@ class EstimateNotifier extends AsyncNotifier<void> {
       throw result.error!; 
     }
   }
+Future<void> deleteEstimate(String reference) async {
+  await _repository.deleteEstimate(reference);
 
-  Future<void> deleteEstimate(String reference) async {
-  state = const AsyncLoading();
-
-  state = await AsyncValue.guard(() async {
-    await _repository.deleteEstimate(reference);
-    
-    // 🔥 Trigger a refresh of the current provider's data 
-    // after a successful deletion.
-    ref.invalidateSelf(); 
-  });
+  // 🔥 Refresh the provider
+  ref.invalidateSelf();
 }
 }
 

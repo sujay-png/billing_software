@@ -1,3 +1,4 @@
+import 'package:billing_software/screens/items/providers/item_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -329,7 +330,10 @@ class _AddItemScreenState extends State<AddItemScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Item saved successfully!")),
       );
-   context.go('/items');
+   Navigator.push(
+  context,
+  MaterialPageRoute(builder: (context) => const ItemsDashboard()),
+);
     }
   } catch (e) {
     debugPrint("Save Error: $e");
@@ -912,7 +916,8 @@ class _InventoryRowState extends State<_InventoryRow> {
                       await Supabase.instance.client
                           .from('items')
                           .delete()
-                          .eq('id', widget.itemData['id']);
+                          .eq('id', widget.itemData['id'])
+                          .select();
                     }
                   },
                   child: const Icon(
