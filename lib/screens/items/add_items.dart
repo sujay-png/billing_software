@@ -177,62 +177,63 @@ class _ItemsDashboardState extends State<ItemsDashboard> {
           _buildTableHeader(),
           const Divider(height: 1),
           Expanded(
-            child: StreamBuilder<List<Map<String, dynamic>>>(
-              stream: Supabase.instance.client
-                  .from('items')
-                  .stream(primaryKey: ['id'])
-                  .order('created_at', ascending: false),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+           child: FutureBuilder<List<Map<String, dynamic>>>(
+  future: Supabase.instance.client
+      .from('items')
+      .select()
+      .order('created_at', ascending: false),
+  builder: (context, snapshot) {
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-                if (snapshot.hasError) {
-                  return Center(child: Text("Error: ${snapshot.error}"));
-                }
+    if (snapshot.hasError) {
+      return Center(child: Text("Error: ${snapshot.error}"));
+    }
 
-                final items = snapshot.data ?? [];
-final filteredItems = items.where((item) {
-  final name = (item['item_name'] ?? "").toString().toLowerCase();
-  final sku = (item['sku'] ?? "").toString().toLowerCase();
-  final category = (item['category'] ?? "").toString().toLowerCase();
+    final items = (snapshot.data ?? []) as List<Map<String, dynamic>>;
 
-  return name.contains(_searchQuery.toLowerCase()) ||
-      sku.contains(_searchQuery.toLowerCase()) ||
-      category.contains(_searchQuery.toLowerCase());
-}).toList();
-                if (items.isEmpty) {
-                  return const Center(child: Text("No items found."));
-                }
+    final filteredItems = items.where((item) {
+      final name =
+          (item['item_name'] ?? "").toString().toLowerCase();
+      final sku =
+          (item['sku'] ?? "").toString().toLowerCase();
+      final category =
+          (item['category'] ?? "").toString().toLowerCase();
 
-                return ListView.separated(
-                  padding: EdgeInsets.zero,
-                  shrinkWrap: false,
-                  itemCount: filteredItems.length,
-                  separatorBuilder: (context, index) =>
-                      const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final item = filteredItems[index];
-                    final int stock = item['stock'] ?? 0;
+      return name.contains(_searchQuery.toLowerCase()) ||
+          sku.contains(_searchQuery.toLowerCase()) ||
+          category.contains(_searchQuery.toLowerCase());
+    }).toList();
 
-                    String statusLabel = "Out of Stock ($stock)";
-                    Color statusColor = Colors.red;
+    if (filteredItems.isEmpty) {
+      return const Center(child: Text("No items found."));
+    }
 
-                    if (stock > 0) {
-                      statusLabel = stock < 10
-                          ? "Low Stock ($stock)"
-                          : "In Stock ($stock)";
-                      statusColor = stock < 10 ? Colors.orange : Colors.green;
-                    }
+    return ListView.separated(
+      padding: EdgeInsets.zero,
+      itemCount: filteredItems.length,
+      separatorBuilder: (context, index) =>
+          const Divider(height: 1),
+      itemBuilder: (context, index) {
+        final item = filteredItems[index];
+        final int stock = item['stock'] ?? 0;
 
-                    return _InventoryRow(
-                      itemData: item,
-                      statusColor: statusColor,
-                    );
-                  },
-                );
-              },
-            ),
+        Color statusColor = Colors.red;
+
+        if (stock > 0) {
+          statusColor =
+              stock < 10 ? Colors.orange : Colors.green;
+        }
+
+        return _InventoryRow(
+          itemData: item,
+          statusColor: statusColor,
+        );
+      },
+    );
+  },
+),
           ),
         ],
       ),
@@ -918,6 +919,9 @@ class _InventoryRowState extends State<_InventoryRow> {
                           .delete()
                           .eq('id', widget.itemData['id'])
                           .select();
+                           if (mounted) {
+    setState(() {}); 
+  }
                     }
                   },
                   child: const Icon(
