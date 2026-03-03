@@ -1,7 +1,9 @@
+import 'package:billing_software/screens/estimates/estimate.dart';
 import 'package:billing_software/screens/estimates/modules/business_model.dart';
 import 'package:billing_software/screens/estimates/modules/business_provider.dart';
 import 'package:billing_software/screens/estimates/modules/customer_model.dart';
 import 'package:billing_software/screens/estimates/modules/estimate_provider.dart';
+import 'package:billing_software/screens/estimates/modules/estimatelist_Provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -302,15 +304,18 @@ if (idsToDelete.isNotEmpty) {
       .from('estimate_items')
       .delete()
       .inFilter('id', idsToDelete.toList());
+     
 }
+ ref.invalidate(estimatesListProvider);
+    Navigator.push(context,MaterialPageRoute(builder: (context)=>EstimateDashboard()) );
     // 4. Success Feedback & State Cleanup
     if (!mounted) return;
-    ref.invalidate(singleEstimateProvider(uuid)); 
+
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Estimate saved successfully")),
     );   
-
+   
   } catch (e) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(

@@ -68,6 +68,14 @@ class _LoginPageState extends State<LoginPage> {
               ),
 
               const SizedBox(height: 6),
+                 Container(
+                width: 400,
+                alignment: Alignment.centerLeft,
+                child: const Text(
+                  "Password",
+                  style: TextStyle(color: Colors.black87, fontSize: 14),
+                ),
+              ),
 
               Container(
                 width: 400,
