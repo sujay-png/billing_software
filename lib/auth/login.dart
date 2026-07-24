@@ -172,6 +172,7 @@ class _LoginPageState extends State<LoginPage> {
                       );
 
                       // ✅ Auth success → router redirect will handle navigation
+                      
                       messenger.showSnackBar(
                         const SnackBar(content: Text('Login successful')),
                       );
