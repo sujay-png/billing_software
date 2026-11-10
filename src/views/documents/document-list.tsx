@@ -31,40 +31,46 @@ export function DocumentList({
       <form className="max-w-md">
         <Input name="q" defaultValue={query} placeholder={`Search ${noun.toLowerCase()}`} className="h-10 bg-white" />
       </form>
-      <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
-        <Table>
+      <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-2xs">
+        <Table className="w-full table-fixed">
           <TableHeader>
-            <TableRow>
-              <TableHead>Number</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right pr-4">Amount</TableHead>
-              <TableHead className="w-28 text-center pr-2">Actions</TableHead>
+            <TableRow className="border-b border-neutral-200 bg-neutral-50/60">
+              <TableHead className="w-[14%] pl-4 py-3.5">Number</TableHead>
+              <TableHead className="w-[28%] px-3 py-3.5">Customer</TableHead>
+              <TableHead className="w-[16%] px-3 py-3.5">Date</TableHead>
+              <TableHead className="w-[15%] min-w-[90px] px-3 py-3.5">Status</TableHead>
+              <TableHead className="w-[15%] px-3 py-3.5 text-right">Amount</TableHead>
+              <TableHead className="w-[12%] min-w-[80px] px-2 py-3.5 text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-10 text-center text-neutral-500">
+                <TableCell colSpan={6} className="py-12 text-center text-neutral-500">
                   No {noun.toLowerCase()} yet.
                 </TableCell>
               </TableRow>
             ) : (
               rows.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell>
-                    <Link href={`${base}/${row.id}`} className="font-medium underline-offset-4 hover:underline">
+                <TableRow key={row.id} className="hover:bg-neutral-50/70 transition-colors">
+                  <TableCell className="py-3.5 pl-4 truncate font-medium text-neutral-900">
+                    <Link href={`${base}/${row.id}`} className="hover:underline">
                       {row.number || "—"}
                     </Link>
                   </TableCell>
-                  <TableCell>{row.customerName}</TableCell>
-                  <TableCell>{formatDate(row.date)}</TableCell>
-                  <TableCell>
+                  <TableCell className="py-3.5 px-3 truncate text-neutral-900" title={row.customerName}>
+                    {row.customerName}
+                  </TableCell>
+                  <TableCell className="py-3.5 px-3 text-neutral-600 text-xs whitespace-nowrap">
+                    {formatDate(row.date)}
+                  </TableCell>
+                  <TableCell className="py-3.5 px-3">
                     <DocumentStatusDropdown kind={kind} id={row.id} initialDraft={row.draft} />
                   </TableCell>
-                  <TableCell className="text-right tabular-nums font-medium pr-4">{inr(row.total)}</TableCell>
-                  <TableCell className="text-center pr-2">
+                  <TableCell className="py-3.5 px-3 text-right tabular-nums font-semibold text-neutral-900">
+                    {inr(row.total)}
+                  </TableCell>
+                  <TableCell className="py-3.5 px-2 text-center">
                     <div className="inline-flex items-center justify-center gap-2">
                       <Button
                         variant="ghost"

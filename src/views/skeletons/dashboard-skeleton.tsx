@@ -31,17 +31,11 @@ export function DashboardSkeleton() {
             <ul>
               {Array.from({ length: 5 }).map((_, j) => (
                 <li key={j} className="flex items-center justify-between gap-3 border-t border-neutral-100 px-4 py-3">
-                  <div className="space-y-1.5 flex-1">
+                  <div className="space-y-1.5 flex-1 pr-3">
                     <Skeleton className="h-4 w-40" />
                     <Skeleton className="h-3 w-24 opacity-60" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="text-right space-y-1">
-                      <Skeleton className="h-4 w-16 ml-auto" />
-                      <Skeleton className="h-5 w-14 ml-auto rounded-md" />
-                    </div>
-                    <Skeleton className="size-6 rounded-md" />
-                  </div>
+                  <Skeleton className="h-4 w-20 shrink-0" />
                 </li>
               ))}
             </ul>

@@ -35,15 +35,15 @@ export function CustomerList({
         </Button>
       </form>
 
-      <div className="overflow-x-auto rounded-xl border border-neutral-200 bg-white shadow-2xs">
-        <Table className="min-w-full">
+      <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-2xs">
+        <Table className="w-full table-fixed">
           <TableHeader>
             <TableRow className="border-b border-neutral-200 bg-neutral-50/60">
-              <TableHead className="min-w-[240px] pl-4 py-3.5">Name</TableHead>
-              <TableHead className="w-36 px-4 py-3.5">Phone</TableHead>
-              <TableHead className="w-36 px-4 py-3.5">GSTIN</TableHead>
-              <TableHead className="px-4 py-3.5">Place</TableHead>
-              <TableHead className="w-28 px-4 py-3.5 text-center">Actions</TableHead>
+              <TableHead className="w-[32%] pl-4 py-3.5">Name</TableHead>
+              <TableHead className="w-[18%] px-3 py-3.5">Phone</TableHead>
+              <TableHead className="w-[18%] px-3 py-3.5">GSTIN</TableHead>
+              <TableHead className="w-[22%] px-3 py-3.5">Place</TableHead>
+              <TableHead className="w-[10%] min-w-[72px] px-2 py-3.5 text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -56,29 +56,40 @@ export function CustomerList({
             ) : (
               customers.map((customer) => (
                 <TableRow key={customer.id} className="hover:bg-neutral-50/70 transition-colors">
-                  <TableCell className="py-3.5 pl-4">
-                    <Link href={`/customers/${customer.id}`} className="font-medium text-neutral-900 hover:underline">
-                      {customer.name || "Untitled"}
-                    </Link>
-                    {customer.archived ? (
-                      <Badge variant="outline" className="ml-2 text-[10px]">
-                        Archived
-                      </Badge>
-                    ) : null}
+                  <TableCell className="py-3.5 pl-4 truncate">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <Link
+                        href={`/customers/${customer.id}`}
+                        className="font-medium text-neutral-900 hover:underline truncate"
+                        title={customer.name}
+                      >
+                        {customer.name || "Untitled"}
+                      </Link>
+                      {customer.archived ? (
+                        <Badge variant="outline" className="text-[10px] shrink-0">
+                          Archived
+                        </Badge>
+                      ) : null}
+                    </div>
                     {customer.businessName ? (
-                      <p className="text-xs text-neutral-500 mt-0.5">{customer.businessName}</p>
+                      <p className="text-xs text-neutral-500 mt-0.5 truncate" title={customer.businessName}>
+                        {customer.businessName}
+                      </p>
                     ) : null}
                   </TableCell>
-                  <TableCell className="py-3.5 px-4 text-neutral-600 font-mono text-xs">
+                  <TableCell className="py-3.5 px-3 text-neutral-600 font-mono text-xs truncate">
                     {customer.phone || "—"}
                   </TableCell>
-                  <TableCell className="py-3.5 px-4 text-neutral-600 font-mono text-xs">
+                  <TableCell className="py-3.5 px-3 text-neutral-600 font-mono text-xs truncate">
                     {customer.gst || "—"}
                   </TableCell>
-                  <TableCell className="py-3.5 px-4 text-neutral-600 max-w-xs truncate">
+                  <TableCell
+                    className="py-3.5 px-3 text-neutral-600 text-xs truncate"
+                    title={customer.billingAddress || undefined}
+                  >
                     {customer.billingAddress || "—"}
                   </TableCell>
-                  <TableCell className="py-3.5 px-4 text-center">
+                  <TableCell className="py-3.5 px-2 text-center">
                     <Button
                       variant="ghost"
                       size="icon-sm"

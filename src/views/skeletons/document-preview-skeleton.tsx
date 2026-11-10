@@ -62,7 +62,7 @@ export function DocumentPreviewSkeleton() {
           </div>
         </div>
 
-        <div className="border-t border-neutral-200 pt-4 space-y-2">
+        <div className="border-t border-neutral-200/90 pt-7 mt-8 space-y-2">
           <Skeleton className="h-4 w-24" />
           <Skeleton className="h-3 w-72" />
           <Skeleton className="h-3 w-60" />

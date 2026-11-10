@@ -36,15 +36,15 @@ export function ItemList({
         </Button>
       </form>
 
-      <div className="overflow-x-auto rounded-xl border border-neutral-200 bg-white shadow-2xs">
-        <Table className="min-w-full">
+      <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-2xs">
+        <Table className="w-full table-fixed">
           <TableHeader>
             <TableRow className="border-b border-neutral-200 bg-neutral-50/60">
-              <TableHead className="min-w-[280px] pl-4 py-3.5">Item</TableHead>
-              <TableHead className="w-32 px-4 py-3.5">HSN</TableHead>
-              <TableHead className="w-24 px-4 py-3.5">Unit</TableHead>
-              <TableHead className="w-36 px-4 py-3.5 text-right">Rate</TableHead>
-              <TableHead className="w-28 px-4 py-3.5 text-center">Actions</TableHead>
+              <TableHead className="w-[42%] pl-4 py-3.5">Item</TableHead>
+              <TableHead className="w-[16%] px-3 py-3.5">HSN</TableHead>
+              <TableHead className="w-[12%] px-3 py-3.5">Unit</TableHead>
+              <TableHead className="w-[18%] px-3 py-3.5 text-right">Rate</TableHead>
+              <TableHead className="w-[12%] min-w-[72px] px-2 py-3.5 text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -57,29 +57,37 @@ export function ItemList({
             ) : (
               items.map((item) => (
                 <TableRow key={item.id} className="hover:bg-neutral-50/70 transition-colors">
-                  <TableCell className="py-3.5 pl-4 max-w-sm">
-                    <Link href={`/items/${item.id}`} className="font-medium text-neutral-900 hover:underline">
-                      {item.name || "Untitled"}
-                    </Link>
-                    {item.archived ? (
-                      <Badge variant="outline" className="ml-2 text-[10px]">
-                        Archived
-                      </Badge>
-                    ) : null}
+                  <TableCell className="py-3.5 pl-4 truncate">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <Link
+                        href={`/items/${item.id}`}
+                        className="font-medium text-neutral-900 hover:underline truncate"
+                        title={item.name}
+                      >
+                        {item.name || "Untitled"}
+                      </Link>
+                      {item.archived ? (
+                        <Badge variant="outline" className="text-[10px] shrink-0">
+                          Archived
+                        </Badge>
+                      ) : null}
+                    </div>
                     {item.category ? (
-                      <p className="text-xs text-neutral-500 mt-0.5">{item.category}</p>
+                      <p className="text-xs text-neutral-500 mt-0.5 truncate" title={item.category}>
+                        {item.category}
+                      </p>
                     ) : null}
                   </TableCell>
-                  <TableCell className="py-3.5 px-4 text-neutral-600 font-mono text-xs">
+                  <TableCell className="py-3.5 px-3 text-neutral-600 font-mono text-xs truncate">
                     {item.hsn || "—"}
                   </TableCell>
-                  <TableCell className="py-3.5 px-4 text-neutral-600">
+                  <TableCell className="py-3.5 px-3 text-neutral-600 text-xs truncate">
                     {item.unit || "—"}
                   </TableCell>
-                  <TableCell className="py-3.5 px-4 text-right tabular-nums font-semibold text-neutral-900">
+                  <TableCell className="py-3.5 px-3 text-right tabular-nums font-semibold text-neutral-900">
                     {inr(item.cost)}
                   </TableCell>
-                  <TableCell className="py-3.5 px-4 text-center">
+                  <TableCell className="py-3.5 px-2 text-center">
                     <Button
                       variant="ghost"
                       size="icon-sm"

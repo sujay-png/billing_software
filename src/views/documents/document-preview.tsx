@@ -21,6 +21,13 @@ export function DocumentPreview({
   const noun = kind === "invoice" ? "Invoice" : "Estimate";
   const base = kind === "invoice" ? "/invoices" : "/estimates";
 
+  const distinctTaxRates = Array.from(
+    new Set(document.lines.map((l) => Number(l.taxRate || 0)).filter((r) => r > 0)),
+  );
+  const commonTaxRate = distinctTaxRates.length === 1 ? distinctTaxRates[0] : null;
+  const taxHeader = commonTaxRate ? `Tax (${commonTaxRate}%)` : distinctTaxRates.length > 1 ? "Tax" : "Tax (18%)";
+  const taxSummaryLabel = commonTaxRate ? `Tax (${commonTaxRate}%)` : "Tax";
+
   return (
     <div className="space-y-4">
       <div className="no-print flex flex-wrap items-center justify-between gap-3">
@@ -117,12 +124,12 @@ export function DocumentPreview({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-y border-neutral-200 text-left text-xs tracking-wide text-neutral-500 uppercase">
-              <th className="py-2 font-medium">Item</th>
-              <th className="py-2 font-medium">HSN</th>
-              <th className="py-2 text-right font-medium">Qty</th>
-              <th className="py-2 text-right font-medium">Rate</th>
-              <th className="py-2 text-right font-medium">Tax</th>
-              <th className="py-2 text-right font-medium">Amount</th>
+              <th className="py-2.5 font-medium">Item</th>
+              <th className="py-2.5 font-medium">HSN</th>
+              <th className="py-2.5 text-right font-medium">Qty</th>
+              <th className="py-2.5 text-right font-medium">Rate</th>
+              <th className="py-2.5 text-right font-medium">{taxHeader}</th>
+              <th className="py-2.5 text-right font-medium">Amount</th>
             </tr>
           </thead>
           <tbody>
@@ -130,43 +137,42 @@ export function DocumentPreview({
               const amount = lineAmounts(line);
               return (
                 <tr key={`${line.name}-${index}`} className="border-b border-neutral-100">
-                  <td className="py-3 pr-3">
-                    <p className="font-medium">{line.name}</p>
-                    {line.note ? <p className="text-xs text-neutral-500">{line.note}</p> : null}
+                  <td className="py-3.5 pr-3">
+                    <p className="font-medium text-neutral-900">{line.name}</p>
+                    {line.note ? <p className="text-xs text-neutral-500 mt-0.5">{line.note}</p> : null}
                   </td>
-                  <td className="py-3">{line.hsn || "—"}</td>
-                  <td className="py-3 text-right tabular-nums">
+                  <td className="py-3.5 text-neutral-600 font-mono text-xs">{line.hsn || "—"}</td>
+                  <td className="py-3.5 text-right tabular-nums text-neutral-800">
                     {line.qty} {line.unit}
                   </td>
-                  <td className="py-3 text-right tabular-nums">{inr(line.rate)}</td>
-                  <td className="py-3 text-right tabular-nums">
-                    {line.taxRate}%
-                    <span className="block text-xs text-neutral-500">{inr(amount.tax)}</span>
+                  <td className="py-3.5 text-right tabular-nums text-neutral-800">{inr(line.rate)}</td>
+                  <td className="py-3.5 text-right tabular-nums text-neutral-800">
+                    {inr(amount.tax)}
                   </td>
-                  <td className="py-3 text-right font-medium tabular-nums">{inr(amount.total)}</td>
+                  <td className="py-3.5 text-right font-medium tabular-nums text-neutral-950">{inr(amount.total)}</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
 
-        <div className="mt-6 flex justify-end">
-          <dl className="w-full max-w-xs space-y-1 text-sm">
+        <div className="mt-8 flex justify-end">
+          <dl className="w-full max-w-xs space-y-2 text-sm">
             <Row label="Subtotal" value={inr(document.subtotal)} />
-            <Row label="Tax" value={inr(document.tax)} />
-            <Row label="Discount" value={inr(document.discount)} />
-            <div className="flex justify-between border-t border-neutral-900 pt-2 text-base font-semibold">
+            <Row label={taxSummaryLabel} value={inr(document.tax)} />
+            {document.discount ? <Row label="Discount" value={inr(document.discount)} /> : null}
+            <div className="flex justify-between border-t border-neutral-900 pt-3 text-base font-semibold">
               <dt>Amount due</dt>
               <dd className="tabular-nums">{inr(document.roundOff || document.grandTotal)}</dd>
             </div>
           </dl>
         </div>
 
-        {document.notes ? <p className="mt-8 text-sm whitespace-pre-line text-neutral-600">{document.notes}</p> : null}
+        {document.notes ? <p className="mt-12 text-sm whitespace-pre-line text-neutral-600">{document.notes}</p> : null}
 
         {business?.bank.bankname ? (
-          <div className="mt-8 border-t border-neutral-200 pt-4 text-sm text-neutral-600">
-            <p className="font-medium text-neutral-950">Bank details</p>
+          <div className="mt-14 border-t border-neutral-200/90 pt-7 text-sm text-neutral-600 space-y-1.5">
+            <p className="font-semibold text-neutral-950">Bank details</p>
             <p>
               {business.bank.accountname || business.name} · {business.bank.bankname}
               {business.bank.branch ? `, ${business.bank.branch}` : ""}
