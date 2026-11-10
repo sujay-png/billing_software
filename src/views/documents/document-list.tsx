@@ -1,10 +1,11 @@
 import Link from "next/link";
+import { Pencil, Printer } from "lucide-react";
 import { formatDate, inr } from "@/models/money";
 import type { DocumentKind, DocumentListRow } from "@/models/types";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DocumentStatusDropdown } from "@/views/documents/document-status-dropdown";
 
 export function DocumentList({
   kind,
@@ -38,13 +39,14 @@ export function DocumentList({
               <TableHead>Customer</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
+              <TableHead className="text-right pr-4">Amount</TableHead>
+              <TableHead className="w-28 text-center pr-2">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="py-10 text-center text-neutral-500">
+                <TableCell colSpan={6} className="py-10 text-center text-neutral-500">
                   No {noun.toLowerCase()} yet.
                 </TableCell>
               </TableRow>
@@ -59,9 +61,33 @@ export function DocumentList({
                   <TableCell>{row.customerName}</TableCell>
                   <TableCell>{formatDate(row.date)}</TableCell>
                   <TableCell>
-                    <Badge variant={row.draft ? "outline" : "default"}>{row.draft ? "Draft" : "Issued"}</Badge>
+                    <DocumentStatusDropdown kind={kind} id={row.id} initialDraft={row.draft} />
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">{inr(row.total)}</TableCell>
+                  <TableCell className="text-right tabular-nums font-medium pr-4">{inr(row.total)}</TableCell>
+                  <TableCell className="text-center pr-2">
+                    <div className="inline-flex items-center justify-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="size-7.5 rounded-md border border-neutral-200/70 bg-white text-neutral-600 shadow-2xs hover:border-neutral-300 hover:bg-neutral-100 hover:text-neutral-950 transition-colors"
+                        title={`Edit ${kind}`}
+                        render={<Link href={`${base}/${row.id}/edit`} />}
+                      >
+                        <Pencil className="size-3.5" />
+                        <span className="sr-only">Edit {kind}</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="size-7.5 rounded-md border border-neutral-200/70 bg-white text-neutral-600 shadow-2xs hover:border-neutral-300 hover:bg-neutral-100 hover:text-neutral-950 transition-colors"
+                        title={`View / Print ${kind}`}
+                        render={<Link href={`${base}/${row.id}`} />}
+                      >
+                        <Printer className="size-3.5" />
+                        <span className="sr-only">Print {kind}</span>
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))
             )}

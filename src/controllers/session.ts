@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -11,7 +12,7 @@ type AccountRow = {
   role: number | null;
 };
 
-export async function ensureWorkspace(preferredBusinessName?: string): Promise<Workspace | null> {
+export const ensureWorkspace = cache(async (preferredBusinessName?: string): Promise<Workspace | null> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -92,10 +93,10 @@ export async function ensureWorkspace(preferredBusinessName?: string): Promise<W
     businessName: business?.business_name || "Business",
     roleName,
   };
-}
+});
 
-export async function requireWorkspace() {
+export const requireWorkspace = cache(async () => {
   const workspace = await ensureWorkspace();
   if (!workspace) redirect("/login");
   return workspace;
-}
+});

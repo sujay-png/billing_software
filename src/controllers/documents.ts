@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireContext } from "@/controllers/context";
 import { serializeEstimateLines, serializeInvoiceLines } from "@/models/lines";
@@ -72,6 +73,9 @@ export async function saveDocument(
         : supabase.from("Invoices").insert(payload).select("id").single();
       const { data, error } = await query;
       if (error || !data) return { error: error?.message || "Could not save the invoice." };
+      revalidatePath("/invoices");
+      revalidatePath(`/invoices/${data.id}`);
+      revalidatePath("/dashboard");
       return { id: data.id as number };
     }
 
@@ -100,6 +104,9 @@ export async function saveDocument(
       : supabase.from("Estimates").insert(payload).select("id").single();
     const { data, error } = await query;
     if (error || !data) return { error: error?.message || "Could not save the estimate." };
+    revalidatePath("/estimates");
+    revalidatePath(`/estimates/${data.id}`);
+    revalidatePath("/dashboard");
     return { id: data.id as number };
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Could not save." };
@@ -204,6 +211,8 @@ export async function deleteDocument(kind: DocumentKind, id: number) {
   const { supabase, businessId } = await requireContext();
   const table = kind === "invoice" ? "Invoices" : "Estimates";
   await supabase.from(table).delete().eq("id", id).eq("business_ref", businessId);
+  revalidatePath(kind === "invoice" ? "/invoices" : "/estimates");
+  revalidatePath("/dashboard");
   redirect(kind === "invoice" ? "/invoices" : "/estimates");
 }
 
@@ -212,7 +221,25 @@ export async function setDocumentStatus(kind: DocumentKind, id: number, isDraft:
   const table = kind === "invoice" ? "Invoices" : "Estimates";
   const column = "isDraft";
   await supabase.from(table).update({ [column]: isDraft }).eq("id", id).eq("business_ref", businessId);
+  revalidatePath(kind === "invoice" ? "/invoices" : "/estimates");
+  revalidatePath(kind === "invoice" ? `/invoices/${id}` : `/estimates/${id}`);
+  revalidatePath("/dashboard");
   redirect(kind === "invoice" ? `/invoices/${id}` : `/estimates/${id}`);
+}
+
+export async function updateDocumentStatus(kind: DocumentKind, id: number, isDraft: boolean) {
+  try {
+    const { supabase, businessId } = await requireContext();
+    const table = kind === "invoice" ? "Invoices" : "Estimates";
+    const { error } = await supabase.from(table).update({ isDraft }).eq("id", id).eq("business_ref", businessId);
+    if (error) return { error: error.message };
+    revalidatePath(kind === "invoice" ? "/invoices" : "/estimates");
+    revalidatePath(kind === "invoice" ? `/invoices/${id}` : `/estimates/${id}`);
+    revalidatePath("/dashboard");
+    return { ok: true };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Failed to update status" };
+  }
 }
 
 export async function invoiceFromEstimate(estimateId: number) {

@@ -1,24 +1,16 @@
-import { redirect } from "next/navigation";
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { requireWorkspace } from "@/controllers/session";
 
-export async function requireContext() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const { data: account } = await supabase
-    .from("Useraccount")
-    .select("business_ref, user_name")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
-
-  if (!account?.business_ref) redirect("/login");
+export const requireContext = cache(async () => {
+  const [workspace, supabase] = await Promise.all([
+    requireWorkspace(),
+    createClient(),
+  ]);
 
   return {
     supabase,
-    user,
-    businessId: account.business_ref as number,
+    user: { id: workspace.userId, email: workspace.email },
+    businessId: workspace.businessId,
   };
-}
+});

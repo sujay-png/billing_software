@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { Pencil } from "lucide-react";
 import { formatDate, inr } from "@/models/money";
-import type { DocumentListRow } from "@/models/types";
-import { Badge } from "@/components/ui/badge";
+import type { DocumentKind, DocumentListRow } from "@/models/types";
 import { Button } from "@/components/ui/button";
+import { DocumentStatusDropdown } from "@/views/documents/document-status-dropdown";
 
 export function DashboardView({
   businessName,
@@ -41,8 +42,8 @@ export function DashboardView({
         <Metric label="Customers / items" value={`${customerCount} / ${itemCount}`} />
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
-        <Recent title="Recent invoices" rows={recentInvoices} href="/invoices" />
-        <Recent title="Recent estimates" rows={recentEstimates} href="/estimates" />
+        <Recent title="Recent invoices" rows={recentInvoices} href="/invoices" kind="invoice" />
+        <Recent title="Recent estimates" rows={recentEstimates} href="/estimates" kind="estimate" />
       </div>
     </div>
   );
@@ -58,7 +59,17 @@ function Metric({ label, value, hint }: { label: string; value: string; hint?: s
   );
 }
 
-function Recent({ title, rows, href }: { title: string; rows: DocumentListRow[]; href: string }) {
+function Recent({
+  title,
+  rows,
+  href,
+  kind,
+}: {
+  title: string;
+  rows: DocumentListRow[];
+  href: string;
+  kind: DocumentKind;
+}) {
   return (
     <section className="rounded-xl border border-neutral-200 bg-white">
       <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
@@ -71,15 +82,28 @@ function Recent({ title, rows, href }: { title: string; rows: DocumentListRow[];
         {rows.length === 0 ? <li className="px-4 py-8 text-sm text-neutral-500">Nothing here yet.</li> : null}
         {rows.map((row) => (
           <li key={row.id} className="flex items-center justify-between gap-3 border-t border-neutral-100 px-4 py-3 text-sm">
-            <div>
-              <Link href={`${href}/${row.id}`} className="font-medium hover:underline">
+            <div className="min-w-0 flex-1">
+              <Link href={`${href}/${row.id}`} className="font-medium hover:underline truncate block">
                 {row.number || "—"} · {row.customerName}
               </Link>
               <p className="text-xs text-neutral-500">{formatDate(row.date)}</p>
             </div>
-            <div className="text-right">
-              <p className="tabular-nums">{inr(row.total)}</p>
-              <Badge variant={row.draft ? "outline" : "default"}>{row.draft ? "Draft" : "Issued"}</Badge>
+            <div className="flex items-center gap-2">
+              <div className="text-right">
+                <p className="tabular-nums font-medium">{inr(row.total)}</p>
+                <div className="mt-0.5">
+                  <DocumentStatusDropdown kind={kind} id={row.id} initialDraft={row.draft} size="sm" />
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                title={`Edit ${kind}`}
+                render={<Link href={`${href}/${row.id}/edit`} />}
+              >
+                <Pencil className="size-3 text-neutral-600 hover:text-neutral-950" />
+                <span className="sr-only">Edit</span>
+              </Button>
             </div>
           </li>
         ))}

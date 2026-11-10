@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireContext } from "@/controllers/context";
 import { mapItem } from "@/models/mappers";
@@ -56,12 +57,17 @@ export async function saveItem(id: number | null, _state: FormState, formData: F
     : supabase.from("Items").insert(payload);
   const { error } = await query;
   if (error) return { error: error.message };
+  revalidatePath("/items");
+  revalidatePath("/dashboard");
   redirect("/items");
 }
 
 export async function archiveItem(id: number, archived: boolean) {
   const { supabase, businessId } = await requireContext();
   await supabase.from("Items").update({ isArchive: archived }).eq("id", id).eq("business_ref", businessId);
+  revalidatePath("/items");
+  revalidatePath(`/items/${id}`);
+  revalidatePath("/dashboard");
   redirect(`/items/${id}`);
 }
 
@@ -87,5 +93,6 @@ export async function quickCreateItem(input: {
     .select("*")
     .single();
   if (error || !data) return { error: error?.message || "Could not add the item." };
+  revalidatePath("/items");
   return { item: mapItem(data as Record<string, unknown>) };
 }

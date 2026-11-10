@@ -1,16 +1,18 @@
 "use server";
 
+import { cache } from "react";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireContext } from "@/controllers/context";
 import { mapBusiness } from "@/models/mappers";
 import type { FormState } from "@/controllers/customers";
 
-export async function getBusiness() {
+export const getBusiness = cache(async () => {
   const { supabase, businessId } = await requireContext();
   const { data, error } = await supabase.from("business").select("*").eq("id", businessId).maybeSingle();
   if (error) throw new Error(error.message);
   return data ? mapBusiness(data as Record<string, unknown>) : null;
-}
+});
 
 export async function saveBusiness(_state: FormState, formData: FormData): Promise<FormState> {
   const { supabase, businessId } = await requireContext();
@@ -41,5 +43,10 @@ export async function saveBusiness(_state: FormState, formData: FormData): Promi
     .eq("id", businessId);
 
   if (error) return { error: error.message };
+
+  revalidatePath("/settings");
+  revalidatePath("/invoices");
+  revalidatePath("/estimates");
+  revalidatePath("/dashboard");
   redirect("/settings?saved=1");
 }

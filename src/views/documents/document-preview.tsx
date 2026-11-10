@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { deleteDocument, invoiceFromEstimate, setDocumentStatus } from "@/controllers/documents";
+import { Pencil } from "lucide-react";
+import { deleteDocument, invoiceFromEstimate } from "@/controllers/documents";
 import { formatDate, inr, lineAmounts } from "@/models/money";
 import type { BusinessProfile, Customer, DocumentKind, SavedDocument } from "@/models/types";
-import { PrintButton } from "@/views/documents/print-button";
-import { Badge } from "@/components/ui/badge";
+import { PrintActions } from "@/views/documents/print-button";
 import { Button } from "@/components/ui/button";
+import { DocumentStatusDropdown } from "@/views/documents/document-status-dropdown";
 
 export function DocumentPreview({
   kind,
@@ -27,22 +28,13 @@ export function DocumentPreview({
           <p className="text-xs tracking-[0.16em] text-neutral-500 uppercase">{noun}</p>
           <h1 className="text-2xl font-semibold">{document.number || noun}</h1>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <PrintButton />
-          <Button variant="outline" render={<Link href={`${base}/${document.id}/edit`} />}>
+        <div className="flex flex-wrap items-center gap-2">
+          <PrintActions documentNumber={document.number} noun={noun} />
+          <DocumentStatusDropdown kind={kind} id={document.id} initialDraft={document.draft} />
+          <Button variant="outline" render={<Link href={`${base}/${document.id}/edit`} />} className="gap-1.5">
+            <Pencil className="size-4" />
             Edit
           </Button>
-          {document.draft ? (
-            <form action={setDocumentStatus.bind(null, kind, document.id, false)}>
-              <Button type="submit">{kind === "invoice" ? "Issue" : "Mark final"}</Button>
-            </form>
-          ) : (
-            <form action={setDocumentStatus.bind(null, kind, document.id, true)}>
-              <Button type="submit" variant="outline">
-                Mark draft
-              </Button>
-            </form>
-          )}
           {kind === "estimate" ? (
             <form action={invoiceFromEstimate.bind(null, document.id)}>
               <Button type="submit" variant="outline">
@@ -51,7 +43,7 @@ export function DocumentPreview({
             </form>
           ) : null}
           <form action={deleteDocument.bind(null, kind, document.id)}>
-            <Button type="submit" variant="ghost">
+            <Button type="submit" variant="ghost" className="text-destructive hover:bg-destructive/10 hover:text-destructive">
               Delete
             </Button>
           </form>
@@ -75,9 +67,14 @@ export function DocumentPreview({
               {document.draft ? `Draft ${noun}` : kind === "invoice" ? "Tax invoice" : "Estimate"}
             </p>
             <p className="mt-1 text-2xl font-semibold">{document.number}</p>
-            <Badge variant={document.draft ? "outline" : "default"} className="mt-2">
-              {document.draft ? "Draft" : "Issued"}
-            </Badge>
+            <div className="mt-2 flex justify-end no-print">
+              <DocumentStatusDropdown kind={kind} id={document.id} initialDraft={document.draft} size="sm" />
+            </div>
+            <div className="hidden print:block mt-1">
+              <span className="text-xs font-semibold uppercase tracking-wider text-neutral-700">
+                {document.draft ? "Draft" : kind === "invoice" ? "Issued" : "Final"}
+              </span>
+            </div>
           </div>
         </header>
 

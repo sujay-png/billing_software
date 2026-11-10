@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireContext } from "@/controllers/context";
 import { mapCustomer } from "@/models/mappers";
@@ -66,12 +67,17 @@ export async function saveCustomer(id: number | null, _state: FormState, formDat
     : supabase.from("Customers").insert(payload);
   const { error } = await query;
   if (error) return { error: error.message };
+  revalidatePath("/customers");
+  revalidatePath("/dashboard");
   redirect("/customers");
 }
 
 export async function archiveCustomer(id: number, archived: boolean) {
   const { supabase, businessId } = await requireContext();
   await supabase.from("Customers").update({ isArchive: archived }).eq("id", id).eq("business_ref", businessId);
+  revalidatePath("/customers");
+  revalidatePath(`/customers/${id}`);
+  revalidatePath("/dashboard");
   redirect(`/customers/${id}`);
 }
 
@@ -95,5 +101,6 @@ export async function quickCreateCustomer(input: {
     .select("*")
     .single();
   if (error || !data) return { error: error?.message || "Could not add the customer." };
+  revalidatePath("/customers");
   return { customer: mapCustomer(data as Record<string, unknown>) };
 }
