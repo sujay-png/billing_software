@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  FileCheck,
   FileText,
   LayoutDashboard,
   LogOut,
@@ -22,6 +23,7 @@ const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/invoices", label: "Invoices", icon: ReceiptText },
   { href: "/estimates", label: "Estimates", icon: FileText },
+  { href: "/quotations", label: "Quotations", icon: FileCheck },
   { href: "/customers", label: "Customers", icon: Users },
   { href: "/items", label: "Items", icon: Package },
   { href: "/settings", label: "Settings", icon: Settings },

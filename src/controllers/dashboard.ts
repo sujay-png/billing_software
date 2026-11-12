@@ -45,7 +45,9 @@ export async function dashboardData() {
     };
   });
 
-  const recentEstimates: DocumentListRow[] = (estimates.data ?? []).slice(0, 5).map((row) => {
+  const estimateRows = estimates.data ?? [];
+
+  const recentEstimates: DocumentListRow[] = estimateRows.slice(0, 5).map((row) => {
     const customer = row.customer as { customer_name?: string } | null;
     return {
       id: row.id,
@@ -62,7 +64,7 @@ export async function dashboardData() {
     billed,
     invoiceCount: invoiceRows.length,
     draftCount: drafts,
-    estimateCount: estimates.data?.length ?? 0,
+    estimateCount: estimateRows.length,
     customerCount: customers.count ?? 0,
     itemCount: items.count ?? 0,
     recentInvoices,

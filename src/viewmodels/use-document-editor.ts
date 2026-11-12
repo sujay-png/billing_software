@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { documentTotals, lineAmounts } from "@/models/money";
+import { documentTotals, lineAmounts as moneyLineAmounts } from "@/models/money";
 import type { CatalogItem, Customer, DocumentDraft, LineInput } from "@/models/types";
 
 export type DraftLine = LineInput & { key: string };
@@ -25,7 +25,8 @@ function blankLine(taxRate: number): LineInput {
   };
 }
 
-export function useDocumentEditor(initial: DocumentDraft, defaultTax: number) {
+export function useDocumentEditor(initial: DocumentDraft, defaultTax: number, isEstimate = false) {
+  const effectiveDefaultTax = isEstimate ? 0 : defaultTax;
   const [customerId, setCustomerId] = useState<number | null>(initial.customerId);
   const [customerName, setCustomerName] = useState(initial.customerName);
   const [billing, setBilling] = useState(initial.billing);
@@ -39,13 +40,24 @@ export function useDocumentEditor(initial: DocumentDraft, defaultTax: number) {
   const [orderType, setOrderType] = useState(initial.orderType);
   const [tableNo, setTableNo] = useState(initial.tableNo);
   const [referenceNumber, setReferenceNumber] = useState(initial.referenceNumber);
-  const [lines, setLines] = useState<DraftLine[]>(() => withKeys(initial.lines, defaultTax));
+  const [lines, setLines] = useState<DraftLine[]>(() =>
+    withKeys(
+      isEstimate ? initial.lines.map((l) => ({ ...l, taxRate: 0 })) : initial.lines,
+      effectiveDefaultTax,
+    ),
+  );
   const [focusKey, setFocusKey] = useState<string | null>(null);
 
-  const totals = useMemo(
-    () => documentTotals(lines.filter((line) => line.name.trim()), discount),
-    [lines, discount],
-  );
+  const totals = useMemo(() => {
+    const active = lines
+      .filter((line) => line.name.trim())
+      .map((line) => (isEstimate ? { ...line, taxRate: 0 } : line));
+    return documentTotals(active, discount);
+  }, [lines, discount, isEstimate]);
+
+  function lineAmounts(line: LineInput) {
+    return moneyLineAmounts(isEstimate ? { ...line, taxRate: 0 } : line);
+  }
 
   function updateLine(key: string, patch: Partial<LineInput>) {
     setLines((current) => current.map((line) => (line.key === key ? { ...line, ...patch } : line)));
@@ -83,7 +95,7 @@ export function useDocumentEditor(initial: DocumentDraft, defaultTax: number) {
 
   function addLine() {
     const key = crypto.randomUUID();
-    setLines((current) => [...current, { ...blankLine(defaultTax), key }]);
+    setLines((current) => [...current, { ...blankLine(effectiveDefaultTax), key }]);
     setFocusKey(key);
   }
 
@@ -92,7 +104,7 @@ export function useDocumentEditor(initial: DocumentDraft, defaultTax: number) {
     if (index < 0) return;
     const copyKey = crypto.randomUUID();
     const source = lines[index];
-    const copy: DraftLine = { ...source, key: copyKey, note: "" };
+    const copy: DraftLine = { ...source, key: copyKey, note: "", taxRate: isEstimate ? 0 : source.taxRate };
     setLines((current) => [...current.slice(0, index + 1), copy, ...current.slice(index + 1)]);
     setFocusKey(copyKey);
   }
@@ -100,7 +112,7 @@ export function useDocumentEditor(initial: DocumentDraft, defaultTax: number) {
   function removeLine(key: string) {
     setLines((current) => {
       const next = current.filter((line) => line.key !== key);
-      return next.length > 0 ? next : [{ ...blankLine(defaultTax), key: crypto.randomUUID() }];
+      return next.length > 0 ? next : [{ ...blankLine(effectiveDefaultTax), key: crypto.randomUUID() }];
     });
   }
 
@@ -125,7 +137,7 @@ export function useDocumentEditor(initial: DocumentDraft, defaultTax: number) {
         unit: line.unit,
         qty: line.qty,
         rate: line.rate,
-        taxRate: line.taxRate,
+        taxRate: isEstimate ? 0 : line.taxRate,
         lineDiscount: line.lineDiscount,
       })),
       orderType,

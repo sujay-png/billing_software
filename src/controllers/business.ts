@@ -47,6 +47,7 @@ export async function saveBusiness(_state: FormState, formData: FormData): Promi
   revalidatePath("/settings");
   revalidatePath("/invoices");
   revalidatePath("/estimates");
+  revalidatePath("/quotations");
   revalidatePath("/dashboard");
   redirect("/settings?saved=1");
 }

@@ -1,5 +1,5 @@
 import { parseEstimateLines, parseInvoiceLines } from "@/models/lines";
-import { asNumber, toDateInput } from "@/models/money";
+import { asNumber, round2, toDateInput } from "@/models/money";
 import type { BankDetails, BusinessProfile, CatalogItem, Customer, SavedDocument } from "@/models/types";
 
 function text(value: unknown) {
@@ -89,6 +89,9 @@ export function mapInvoice(row: Record<string, unknown>): SavedDocument {
 }
 
 export function mapEstimate(row: Record<string, unknown>): SavedDocument {
+  const subtotal = asNumber(row.estimate_subtotal);
+  const discount = asNumber(row.estimate_discount);
+  const total = round2(subtotal - discount);
   return {
     id: Number(row.id),
     number: text(row.estimate_no),
@@ -100,16 +103,46 @@ export function mapEstimate(row: Record<string, unknown>): SavedDocument {
     validDate: toDateInput(text(row.estimate_validDate)),
     paymentTerms: text(row.estimate_paymentTerms),
     notes: text(row.estimate_notes),
-    discount: asNumber(row.estimate_discount),
-    lines: parseEstimateLines(row.estimate_items),
+    discount,
+    lines: parseEstimateLines(row.estimate_items).map((line) => ({ ...line, taxRate: 0 })),
     orderType: "",
     tableNo: "",
     referenceNumber: text(row.refnumber),
     draft: row.isDraft == null ? true : Boolean(row.isDraft),
     archived: Boolean(row.isArchive),
-    subtotal: asNumber(row.estimate_subtotal),
-    tax: asNumber(row.estimate_tax),
-    grandTotal: asNumber(row.estimate_grantTotal),
-    roundOff: asNumber(row.estimate_grandtotalroundoff),
+    subtotal,
+    tax: 0,
+    grandTotal: total,
+    roundOff: Math.round(total),
+  };
+}
+
+export function mapQuotation(row: Record<string, unknown>): SavedDocument {
+  const subtotal = asNumber(row.quotation_subtotal ?? row.estimate_subtotal);
+  const discount = asNumber(row.quotation_discount ?? row.estimate_discount);
+  const total = round2(subtotal - discount);
+  const rawItems = row.quotation_items ?? row.estimate_items;
+  return {
+    id: Number(row.id),
+    number: text(row.quotation_no ?? row.estimate_no),
+    customerId: row.customer_ref == null ? null : Number(row.customer_ref),
+    customerName: "",
+    billing: text(row.customer_custombilling),
+    delivery: text(row.customer_customDelivery),
+    date: toDateInput(text(row.quotation_date ?? row.estimate_date)),
+    validDate: toDateInput(text(row.quotation_validDate ?? row.estimate_validDate)),
+    paymentTerms: text(row.quotation_paymentTerms ?? row.estimate_paymentTerms),
+    notes: text(row.quotation_notes ?? row.estimate_notes),
+    discount,
+    lines: parseEstimateLines(rawItems).map((line) => ({ ...line, taxRate: 0 })),
+    orderType: "",
+    tableNo: "",
+    referenceNumber: text(row.refnumber),
+    draft: row.isDraft == null ? true : Boolean(row.isDraft),
+    archived: Boolean(row.isArchive),
+    subtotal,
+    tax: 0,
+    grandTotal: total,
+    roundOff: Math.round(total),
   };
 }

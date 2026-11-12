@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Download, Loader2, Printer } from "lucide-react";
+import { Download, Eye, EyeOff, Loader2, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { cn } from "cn";
 
 function triggerPrintWithTitle(title?: string) {
   if (title && typeof window !== "undefined") {
@@ -80,9 +81,15 @@ async function exportElementToPdf(targetSelector: string, fileName: string) {
 export function PrintActions({
   documentNumber,
   noun = "Invoice",
+  hideBankDetails,
+  onToggleBankDetails,
+  hasBankDetails = true,
 }: {
   documentNumber?: string;
   noun?: string;
+  hideBankDetails?: boolean;
+  onToggleBankDetails?: () => void;
+  hasBankDetails?: boolean;
 }) {
   const [isDownloading, setIsDownloading] = React.useState(false);
   const fileTitle = `${noun}-${documentNumber || "draft"}`.replace(/[\s/\\:]+/g, "-");
@@ -118,6 +125,51 @@ export function PrintActions({
         {isDownloading ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
         <span>{isDownloading ? "Downloading..." : `Download ${noun.toLowerCase()}`}</span>
       </Button>
+
+      {onToggleBankDetails ? (
+        <button
+          type="button"
+          role="switch"
+          aria-checked={hideBankDetails}
+          onClick={onToggleBankDetails}
+          disabled={!hasBankDetails}
+          className={cn(
+            "group inline-flex h-8 items-center gap-2 rounded-lg border px-2.5 text-sm font-medium transition-colors select-none",
+            !hasBankDetails
+              ? "opacity-50 cursor-not-allowed border-border bg-background text-muted-foreground"
+              : hideBankDetails
+                ? "border-neutral-300 bg-neutral-100 text-neutral-900 hover:bg-neutral-200/70 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 cursor-pointer"
+                : "border-border bg-background text-foreground hover:bg-muted cursor-pointer"
+          )}
+          title={
+            !hasBankDetails
+              ? "No bank details configured in business profile"
+              : hideBankDetails
+                ? "Bank details are hidden on document. Click to show."
+                : "Bank details are visible on document. Click to hide."
+          }
+        >
+          {hideBankDetails ? (
+            <EyeOff className="size-4 text-neutral-600 dark:text-neutral-400" />
+          ) : (
+            <Eye className="size-4 text-neutral-500" />
+          )}
+          <span>{hideBankDetails ? "Bank details hidden" : "Hide bank details"}</span>
+          <span
+            className={cn(
+              "relative inline-flex h-4 w-7 shrink-0 items-center rounded-full transition-colors",
+              hideBankDetails ? "bg-primary" : "bg-neutral-300 dark:bg-neutral-600"
+            )}
+          >
+            <span
+              className={cn(
+                "inline-block size-3 rounded-full bg-white transition-transform shadow-xs",
+                hideBankDetails ? "translate-x-3.5" : "translate-x-0.5"
+              )}
+            />
+          </span>
+        </button>
+      ) : null}
 
       <Button
         type="button"

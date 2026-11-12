@@ -15,11 +15,13 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { DeleteDocumentButton } from "@/views/documents/delete-document-button";
 
 const terms = ["Due on receipt", "Net 7", "Net 15", "Net 30", "Net 45", "Net 60"];
 const orderTypes = ["Dine In", "Take Away", "Delivery", "Counter"];
 
-export function DocumentEditor({
+export function 
+DocumentEditor({
   kind,
   initial,
   customers,
@@ -31,8 +33,11 @@ export function DocumentEditor({
   items: CatalogItem[];
 }) {
   const router = useRouter();
-  const defaultTax = kind === "invoice" ? 18 : 0;
-  const editor = useDocumentEditor(initial, defaultTax);
+  const isEstimate = kind === "estimate" || kind === "quotation";
+  const noun = kind === "invoice" ? "Invoice" : kind === "quotation" ? "Quotation" : "Estimate";
+  const base = kind === "invoice" ? "/invoices" : kind === "quotation" ? "/quotations" : "/estimates";
+  const defaultTax = isEstimate ? 0 : 18;
+  const editor = useDocumentEditor(initial, defaultTax, isEstimate);
   const [customerOptions, setCustomerOptions] = useState(customers);
   const [itemOptions, setItemOptions] = useState(items);
   const [error, setError] = useState("");
@@ -55,11 +60,9 @@ export function DocumentEditor({
       setError(result.error || "Could not save.");
       return;
     }
-    router.push(kind === "invoice" ? `/invoices/${result.id}` : `/estimates/${result.id}`);
+    router.push(`${base}/${result.id}`);
     router.refresh();
   }
-
-  const noun = kind === "invoice" ? "Invoice" : "Estimate";
 
   return (
     <div className="space-y-5">
@@ -68,12 +71,20 @@ export function DocumentEditor({
           <p className="text-xs tracking-[0.16em] text-neutral-500 uppercase">{noun}</p>
           <h1 className="text-2xl font-semibold">{initial.id ? `Edit ${editor.number || noun}` : `New ${noun.toLowerCase()}`}</h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          {initial.id ? (
+            <DeleteDocumentButton
+              kind={kind}
+              id={initial.id}
+              documentNumber={editor.number}
+              redirectTo={base}
+            />
+          ) : null}
           <Button type="button" variant="outline" disabled={pending !== null} onClick={() => save(true)}>
             {pending === "draft" ? "Saving" : "Save draft"}
           </Button>
           <Button type="button" disabled={pending !== null} onClick={() => save(false)}>
-            {pending === "final" ? "Saving" : kind === "invoice" ? "Save & issue" : "Save estimate"}
+            {pending === "final" ? "Saving" : kind === "invoice" ? "Save & issue" : `Save ${noun.toLowerCase()}`}
           </Button>
         </div>
       </div>
@@ -125,11 +136,11 @@ export function DocumentEditor({
               <tr>
                 <th className="px-3 py-2 font-medium">Item</th>
                 <th className="px-3 py-2 font-medium">Size / note</th>
-                <th className="w-24 px-3 py-2 font-medium">HSN</th>
+              
                 <th className="w-20 px-3 py-2 font-medium">Qty</th>
                 <th className="w-20 px-3 py-2 font-medium">Unit</th>
                 <th className="w-28 px-3 py-2 font-medium">Rate</th>
-                <th className="w-20 px-3 py-2 font-medium">Tax %</th>
+                {!isEstimate && <th className="w-20 px-3 py-2 font-medium">Tax %</th>}
                 <th className="w-24 px-3 py-2 font-medium">Disc.</th>
                 <th className="w-28 px-3 py-2 text-right font-medium">Amount</th>
                 <th className="w-20 px-2 py-2" />
@@ -172,9 +183,6 @@ export function DocumentEditor({
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <Input value={line.hsn} onChange={(event) => editor.updateLine(line.key, { hsn: event.target.value })} />
-                    </td>
-                    <td className="px-3 py-2">
                       <Input
                         type="number"
                         min="0"
@@ -195,15 +203,17 @@ export function DocumentEditor({
                         onChange={(event) => editor.updateLine(line.key, { rate: Number(event.target.value) })}
                       />
                     </td>
-                    <td className="px-3 py-2">
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={line.taxRate}
-                        onChange={(event) => editor.updateLine(line.key, { taxRate: Number(event.target.value) })}
-                      />
-                    </td>
+                    {!isEstimate && (
+                      <td className="px-3 py-2">
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={line.taxRate}
+                          onChange={(event) => editor.updateLine(line.key, { taxRate: Number(event.target.value) })}
+                        />
+                      </td>
+                    )}
                     <td className="px-3 py-2">
                       <Input
                         type="number"
@@ -252,7 +262,7 @@ export function DocumentEditor({
               />
             </div>
             <Field label={kind === "invoice" ? "Due date" : "Valid until"} type="date" value={editor.validDate} onChange={editor.setValidDate} />
-            {kind === "estimate" ? (
+            {isEstimate ? (
               <Field label="Reference" value={editor.referenceNumber} onChange={editor.setReferenceNumber} />
             ) : (
               <div className="grid grid-cols-2 gap-3">
@@ -286,7 +296,7 @@ export function DocumentEditor({
 
         <aside className="h-fit space-y-3 rounded-xl border border-neutral-200 bg-white p-4">
           <Total label="Subtotal" value={inr(editor.totals.subtotal)} />
-          <Total label="Tax" value={inr(editor.totals.tax)} />
+          {!isEstimate && <Total label="Tax" value={inr(editor.totals.tax)} />}
           <div className="flex items-center justify-between gap-3 text-sm">
             <Label htmlFor="discount">Discount</Label>
             <Input
@@ -461,7 +471,7 @@ function ItemDialog({
           <div className="grid grid-cols-3 gap-3">
             <Field label="Rate" value={rate} onChange={setRate} />
             <Field label="Unit" value={unit} onChange={setUnit} />
-            <Field label="HSN" value={hsn} onChange={setHsn} />
+           
           </div>
           {error ? <p className="text-sm">{error}</p> : null}
         </div>

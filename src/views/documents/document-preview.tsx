@@ -1,11 +1,16 @@
+"use client";
+
+import * as React from "react";
 import Link from "next/link";
 import { Pencil } from "lucide-react";
-import { deleteDocument, invoiceFromEstimate } from "@/controllers/documents";
+import { invoiceFromEstimate } from "@/controllers/documents";
 import { formatDate, inr, lineAmounts } from "@/models/money";
 import type { BusinessProfile, Customer, DocumentKind, SavedDocument } from "@/models/types";
 import { PrintActions } from "@/views/documents/print-button";
 import { Button } from "@/components/ui/button";
 import { DocumentStatusDropdown } from "@/views/documents/document-status-dropdown";
+import { DeleteDocumentButton } from "@/views/documents/delete-document-button";
+import AmountInWords from "@/components/AmountInWords";
 
 export function DocumentPreview({
   kind,
@@ -18,15 +23,22 @@ export function DocumentPreview({
   customer: Customer | null;
   business: BusinessProfile | null;
 }) {
-  const noun = kind === "invoice" ? "Invoice" : "Estimate";
-  const base = kind === "invoice" ? "/invoices" : "/estimates";
+  const [hideBankDetails, setHideBankDetails] = React.useState(false);
+  const isEstimate = kind === "estimate" || kind === "quotation";
+  const noun = kind === "invoice" ? "Invoice" : kind === "quotation" ? "Quotation" : "Estimate";
+  const base = kind === "invoice" ? "/invoices" : kind === "quotation" ? "/quotations" : "/estimates";
 
-  const distinctTaxRates = Array.from(
-    new Set(document.lines.map((l) => Number(l.taxRate || 0)).filter((r) => r > 0)),
-  );
+  const distinctTaxRates = isEstimate
+    ? []
+    : Array.from(
+        new Set(document.lines.map((l) => Number(l.taxRate || 0)).filter((r) => r > 0)),
+      );
   const commonTaxRate = distinctTaxRates.length === 1 ? distinctTaxRates[0] : null;
   const taxHeader = commonTaxRate ? `Tax (${commonTaxRate}%)` : distinctTaxRates.length > 1 ? "Tax" : "Tax (18%)";
   const taxSummaryLabel = commonTaxRate ? `Tax (${commonTaxRate}%)` : "Tax";
+  const totalAmount = isEstimate
+    ? Math.round(document.subtotal - (document.discount || 0))
+    : (document.roundOff || document.grandTotal);
 
   return (
     <div className="space-y-4">
@@ -36,24 +48,31 @@ export function DocumentPreview({
           <h1 className="text-2xl font-semibold">{document.number || noun}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <PrintActions documentNumber={document.number} noun={noun} />
+          <PrintActions
+            documentNumber={document.number}
+            noun={noun}
+            hideBankDetails={hideBankDetails}
+            onToggleBankDetails={() => setHideBankDetails((prev) => !prev)}
+            hasBankDetails={Boolean(business?.bank?.bankname)}
+          />
           <DocumentStatusDropdown kind={kind} id={document.id} initialDraft={document.draft} />
           <Button variant="outline" render={<Link href={`${base}/${document.id}/edit`} />} className="gap-1.5">
             <Pencil className="size-4" />
             Edit
           </Button>
-          {kind === "estimate" ? (
-            <form action={invoiceFromEstimate.bind(null, document.id)}>
+          {kind === "estimate" || kind === "quotation" ? (
+            <form action={invoiceFromEstimate.bind(null, document.id, kind)}>
               <Button type="submit" variant="outline">
                 Make invoice
               </Button>
             </form>
           ) : null}
-          <form action={deleteDocument.bind(null, kind, document.id)}>
-            <Button type="submit" variant="ghost" className="text-destructive hover:bg-destructive/10 hover:text-destructive">
-              Delete
-            </Button>
-          </form>
+          <DeleteDocumentButton
+            kind={kind}
+            id={document.id}
+            documentNumber={document.number}
+            redirectTo={base}
+          />
         </div>
       </div>
 
@@ -71,7 +90,7 @@ export function DocumentPreview({
           </div>
           <div className="text-right">
             <p className="text-xs tracking-[0.16em] text-neutral-500 uppercase">
-              {document.draft ? `Draft ${noun}` : kind === "invoice" ? "Tax invoice" : "Estimate"}
+              {document.draft ? `Draft ${noun}` : kind === "invoice" ? "Tax invoice" : noun}
             </p>
             <p className="mt-1 text-2xl font-semibold">{document.number}</p>
             <div className="mt-2 flex justify-end no-print">
@@ -125,30 +144,33 @@ export function DocumentPreview({
           <thead>
             <tr className="border-y border-neutral-200 text-left text-xs tracking-wide text-neutral-500 uppercase">
               <th className="py-2.5 font-medium">Item</th>
-              <th className="py-2.5 font-medium">HSN</th>
+             
               <th className="py-2.5 text-right font-medium">Qty</th>
               <th className="py-2.5 text-right font-medium">Rate</th>
-              <th className="py-2.5 text-right font-medium">{taxHeader}</th>
+              {!isEstimate && <th className="py-2.5 text-right font-medium">{taxHeader}</th>}
               <th className="py-2.5 text-right font-medium">Amount</th>
             </tr>
           </thead>
           <tbody>
             {document.lines.map((line, index) => {
-              const amount = lineAmounts(line);
+              const effectiveLine = isEstimate ? { ...line, taxRate: 0 } : line;
+              const amount = lineAmounts(effectiveLine);
               return (
                 <tr key={`${line.name}-${index}`} className="border-b border-neutral-100">
                   <td className="py-3.5 pr-3">
                     <p className="font-medium text-neutral-900">{line.name}</p>
                     {line.note ? <p className="text-xs text-neutral-500 mt-0.5">{line.note}</p> : null}
                   </td>
-                  <td className="py-3.5 text-neutral-600 font-mono text-xs">{line.hsn || "—"}</td>
+                 
                   <td className="py-3.5 text-right tabular-nums text-neutral-800">
                     {line.qty} {line.unit}
                   </td>
                   <td className="py-3.5 text-right tabular-nums text-neutral-800">{inr(line.rate)}</td>
-                  <td className="py-3.5 text-right tabular-nums text-neutral-800">
-                    {inr(amount.tax)}
-                  </td>
+                  {!isEstimate && (
+                    <td className="py-3.5 text-right tabular-nums text-neutral-800">
+                      {inr(amount.tax)}
+                    </td>
+                  )}
                   <td className="py-3.5 text-right font-medium tabular-nums text-neutral-950">{inr(amount.total)}</td>
                 </tr>
               );
@@ -156,21 +178,24 @@ export function DocumentPreview({
           </tbody>
         </table>
 
-        <div className="mt-8 flex justify-end">
+        <div className="mt-8 flex flex-col items-end">
           <dl className="w-full max-w-xs space-y-2 text-sm">
             <Row label="Subtotal" value={inr(document.subtotal)} />
-            <Row label={taxSummaryLabel} value={inr(document.tax)} />
+            {!isEstimate && <Row label={taxSummaryLabel} value={inr(document.tax)} />}
             {document.discount ? <Row label="Discount" value={inr(document.discount)} /> : null}
-            <div className="flex justify-between border-t border-neutral-900 pt-3 text-base font-semibold">
-              <dt>Amount due</dt>
-              <dd className="tabular-nums">{inr(document.roundOff || document.grandTotal)}</dd>
+            <div className="flex justify-between border-y border-neutral-900 py-3 text-base font-semibold">
+              <dt>{isEstimate ? `Total ${noun.toLowerCase()}` : "Amount due"}</dt>
+              <dd className="tabular-nums">{inr(totalAmount)}</dd>
             </div>
           </dl>
+          <div className="text-right">
+            <AmountInWords amount={totalAmount} />
+          </div>
         </div>
 
         {document.notes ? <p className="mt-12 text-sm whitespace-pre-line text-neutral-600">{document.notes}</p> : null}
 
-        {business?.bank.bankname ? (
+        {!hideBankDetails && business?.bank.bankname ? (
           <div className="mt-14 border-t border-neutral-200/90 pt-7 text-sm text-neutral-600 space-y-1.5">
             <p className="font-semibold text-neutral-950">Bank details</p>
             <p>

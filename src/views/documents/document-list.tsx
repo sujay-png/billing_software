@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DocumentStatusDropdown } from "@/views/documents/document-status-dropdown";
+import { DeleteDocumentButton } from "@/views/documents/delete-document-button";
 
 export function DocumentList({
   kind,
@@ -16,8 +17,8 @@ export function DocumentList({
   rows: DocumentListRow[];
   query: string;
 }) {
-  const noun = kind === "invoice" ? "Invoices" : "Estimates";
-  const base = kind === "invoice" ? "/invoices" : "/estimates";
+  const noun = kind === "invoice" ? "Invoices" : kind === "quotation" ? "Quotations" : "Estimates";
+  const base = kind === "invoice" ? "/invoices" : kind === "quotation" ? "/quotations" : "/estimates";
 
   return (
     <div className="space-y-4">
@@ -92,6 +93,12 @@ export function DocumentList({
                         <Printer className="size-3.5" />
                         <span className="sr-only">Print {kind}</span>
                       </Button>
+                      <DeleteDocumentButton
+                        kind={kind}
+                        id={row.id}
+                        documentNumber={row.number}
+                        variant="icon"
+                      />
                     </div>
                   </TableCell>
                 </TableRow>

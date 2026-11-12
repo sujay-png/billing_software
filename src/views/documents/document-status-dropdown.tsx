@@ -121,7 +121,7 @@ export function DocumentStatusDropdown({
                 <div className="flex flex-col text-left">
                   <span className="font-medium text-neutral-900">{finalLabel}</span>
                   <span className="text-[10px] text-neutral-500">
-                    {kind === "invoice" ? "Issued & billable" : "Final quotation"}
+                    {kind === "invoice" ? "Issued & billable" : kind === "quotation" ? "Final quotation" : "Final estimate"}
                   </span>
                 </div>
               </div>

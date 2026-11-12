@@ -34,7 +34,7 @@ export function DashboardView({
         <Button render={<Link href="/invoices/new" />}>New invoice</Button>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Metric label="Billing" value={inr(billed)} hint={`${invoiceCount - draftCount} issued · ${draftCount} drafts`} />
+    
         <Metric label="Invoices" value={`${invoiceCount}`} hint={`${draftCount} still drafts`} />
         <Metric label="Estimates" value={`${estimateCount}`} />
         <Metric label="Customers / items" value={`${customerCount} / ${itemCount}`} />

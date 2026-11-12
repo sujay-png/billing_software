@@ -69,7 +69,7 @@ export type LineInput = {
   lineDiscount: number;
 };
 
-export type DocumentKind = "invoice" | "estimate";
+export type DocumentKind = "invoice" | "estimate" | "quotation";
 
 export type DocumentDraft = {
   id?: number;
