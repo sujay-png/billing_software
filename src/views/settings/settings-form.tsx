@@ -19,7 +19,7 @@ export function SettingsForm({ business, saved }: { business: BusinessProfile; s
       <Field label="Business name" name="name" defaultValue={business.name} required className="md:col-span-2" />
       <Field label="Owner" name="owner" defaultValue={business.owner} />
       <Field label="Email" name="email" defaultValue={business.email} />
-      <Field label="Phone" name="phone" defaultValue={business.phone} />
+      <Field label="Phone" name="phone" defaultValue={business.phone} placeholder="Ph .No.0824 -2410136" />
       <Field label="Mobile" name="mobile" defaultValue={business.mobile} />
       <Field label="GSTIN" name="gst" defaultValue={business.gst} />
       <Field label="State" name="state" defaultValue={business.state} />

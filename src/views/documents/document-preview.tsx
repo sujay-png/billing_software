@@ -12,6 +12,17 @@ import { DocumentStatusDropdown } from "@/views/documents/document-status-dropdo
 import { DeleteDocumentButton } from "@/views/documents/delete-document-button";
 import AmountInWords from "@/components/AmountInWords";
 
+function formatBusinessPhone(phone?: string | null) {
+  if (!phone) return "";
+  const trimmed = phone.trim();
+  if (!trimmed) return "";
+  if (/^ph\b/i.test(trimmed)) return trimmed;
+  if (trimmed === "2410136" || /^0824\s*-?\s*2410136$/.test(trimmed)) {
+    return "Ph .No.0824 -2410136";
+  }
+  return `Ph .No. ${trimmed}`;
+}
+
 export function DocumentPreview({
   kind,
   document,
@@ -24,6 +35,9 @@ export function DocumentPreview({
   business: BusinessProfile | null;
 }) {
   const [hideBankDetails, setHideBankDetails] = React.useState(false);
+  const [letterheadMode, setLetterheadMode] = React.useState(false);
+  const defaultSpacing = kind === "estimate" ? 50 : kind === "quotation" ? 70 : 50;
+  const [letterheadSpacing, setLetterheadSpacing] = React.useState<number>(defaultSpacing);
   const isEstimate = kind === "estimate" || kind === "quotation";
   const noun = kind === "invoice" ? "Invoice" : kind === "quotation" ? "Quotation" : "Estimate";
   const base = kind === "invoice" ? "/invoices" : kind === "quotation" ? "/quotations" : "/estimates";
@@ -54,6 +68,10 @@ export function DocumentPreview({
             hideBankDetails={hideBankDetails}
             onToggleBankDetails={() => setHideBankDetails((prev) => !prev)}
             hasBankDetails={Boolean(business?.bank?.bankname)}
+            letterheadMode={letterheadMode}
+            onToggleLetterheadMode={() => setLetterheadMode((prev) => !prev)}
+            letterheadSpacing={letterheadSpacing}
+            onSelectLetterheadSpacing={setLetterheadSpacing}
           />
           <DocumentStatusDropdown kind={kind} id={document.id} initialDraft={document.draft} />
           <Button variant="outline" render={<Link href={`${base}/${document.id}/edit`} />} className="gap-1.5">
@@ -76,71 +94,109 @@ export function DocumentPreview({
         </div>
       </div>
 
-      <article className="print-sheet rounded-xl border border-neutral-200 bg-white p-6 md:p-10">
-        <header className="flex flex-wrap items-start justify-between gap-6 border-b border-neutral-200 pb-6">
-          <div>
-            <h2 className="text-xl font-semibold">{business?.name || "Business"}</h2>
-            <p className="mt-2 max-w-sm text-sm whitespace-pre-line text-neutral-600">{business?.address}</p>
-            <p className="mt-2 text-sm text-neutral-600">
-              {[business?.gst ? `GSTIN ${business.gst}` : "", business?.state, business?.stateCode ? `Code ${business.stateCode}` : ""]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-            <p className="text-sm text-neutral-600">{[business?.phone, business?.email].filter(Boolean).join(" · ")}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs tracking-[0.16em] text-neutral-500 uppercase">
-              {document.draft ? `Draft ${noun}` : kind === "invoice" ? "Tax invoice" : noun}
-            </p>
-            <p className="mt-1 text-2xl font-semibold">{document.number}</p>
-            <div className="mt-2 flex justify-end no-print">
-              <DocumentStatusDropdown kind={kind} id={document.id} initialDraft={document.draft} size="sm" />
-            </div>
-            <div className="hidden print:block mt-1">
-              <span className="text-xs font-semibold uppercase tracking-wider text-neutral-700">
-                {document.draft ? "Draft" : kind === "invoice" ? "Issued" : "Final"}
-              </span>
-            </div>
-          </div>
-        </header>
+      {letterheadMode && (
+        <div className="no-print rounded-lg border border-amber-200 bg-amber-50/90 px-3.5 py-2 text-xs text-amber-900 flex items-center justify-between">
+          <span>
+            <strong>Letterhead space is active ({letterheadSpacing}mm blank space at top):</strong> Header is hidden so your bill prints directly onto your pre-printed stationery.
+          </span>
+          <button
+            type="button"
+            onClick={() => setLetterheadMode(false)}
+            className="font-medium underline hover:text-amber-950 ml-2 cursor-pointer"
+          >
+            Switch to plain paper
+          </button>
+        </div>
+      )}
 
-        <div className="grid gap-6 py-6 md:grid-cols-3">
+      <article className="print-sheet rounded-xl border border-neutral-200 bg-white p-6 md:p-10">
+        {letterheadMode ? (
+          /* When printing on letterhead: No header at all, pure blank space */
+          <div
+            style={{
+              height: `${letterheadSpacing}mm`,
+              minHeight: `${letterheadSpacing}mm`,
+            }}
+            className="letterhead-spacer w-full block transition-all"
+            aria-hidden="true"
+          >
+            <div className="h-full w-full flex items-center justify-center border border-dashed border-neutral-300 rounded-lg text-xs text-neutral-400 no-print select-none">
+              Pre-printed Letterhead Space ({letterheadSpacing}mm) — Blank on print &amp; PDF
+            </div>
+          </div>
+        ) : (
+          /* Normal Plain Paper: Full Business Header */
+          <header className="flex flex-wrap items-start justify-between gap-6 border-b border-neutral-200 pb-6">
+            <div>
+              <h2 className="text-xl font-bold text-neutral-950">{business?.name || "James Enterprises"}</h2>
+              <p className="mt-1.5 max-w-sm text-sm whitespace-pre-line text-neutral-600">{business?.address}</p>
+              <p className="mt-1.5 text-sm text-neutral-600">
+                {[business?.gst ? `GSTIN ${business.gst}` : "", business?.state, business?.stateCode ? `Code ${business.stateCode}` : ""]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+              <p className="text-sm text-neutral-600">{[formatBusinessPhone(business?.phone), business?.email].filter(Boolean).join(" · ")}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs tracking-[0.16em] text-neutral-500 uppercase">
+                {document.draft ? `Draft ${noun}` : kind === "invoice" ? "Tax invoice" : noun}
+              </p>
+              <p className="mt-1 text-2xl font-semibold">{document.number}</p>
+              <div className="mt-2 flex justify-end no-print">
+                <DocumentStatusDropdown kind={kind} id={document.id} initialDraft={document.draft} size="sm" />
+              </div>
+              <div className="hidden print:block mt-1">
+                <span className="text-xs font-semibold uppercase tracking-wider text-neutral-700">
+                  {document.draft ? "Draft" : kind === "invoice" ? "Issued" : "Final"}
+                </span>
+              </div>
+            </div>
+          </header>
+        )}
+
+        {/* Bill to & Document Details */}
+        <div className="flex flex-wrap items-start justify-between gap-6 py-6 border-b border-neutral-100">
           <div>
             <p className="text-xs tracking-wide text-neutral-500 uppercase">Bill to</p>
-            <p className="mt-1 font-medium">{customer?.name || document.customerName || "Customer"}</p>
-            <p className="text-sm whitespace-pre-line text-neutral-600">{document.billing || customer?.billingAddress}</p>
-            <p className="text-sm text-neutral-600">{[customer?.phone, customer?.email].filter(Boolean).join(" · ")}</p>
-            {customer?.gst ? <p className="text-sm text-neutral-600">GSTIN {customer.gst}</p> : null}
-          </div>
-          <div>
-            <p className="text-xs tracking-wide text-neutral-500 uppercase">Deliver to</p>
-            <p className="mt-1 text-sm whitespace-pre-line text-neutral-700">{document.delivery || customer?.shippingAddress || "—"}</p>
-          </div>
-          <dl className="space-y-1 text-sm md:text-right">
-            <div className="flex justify-between gap-6 md:justify-end">
-              <dt className="text-neutral-500">Date</dt>
-              <dd>{formatDate(document.date)}</dd>
-            </div>
-            <div className="flex justify-between gap-6 md:justify-end">
-              <dt className="text-neutral-500">{kind === "invoice" ? "Due" : "Valid"}</dt>
-              <dd>{formatDate(document.validDate)}</dd>
-            </div>
-            {document.paymentTerms ? (
-              <div className="flex justify-between gap-6 md:justify-end">
-                <dt className="text-neutral-500">Terms</dt>
-                <dd>{document.paymentTerms}</dd>
-              </div>
+            <p className="mt-1 font-semibold text-neutral-950 text-base">{customer?.name || document.customerName || "Customer"}</p>
+            {document.delivery || customer?.shippingAddress ? (
+              <p className="text-sm text-neutral-600 whitespace-pre-line mt-0.5">
+                <span className="font-medium text-neutral-500">Site : </span>
+                {document.delivery || customer?.shippingAddress}
+              </p>
+            ) : document.billing || customer?.billingAddress ? (
+              <p className="text-sm text-neutral-600 whitespace-pre-line mt-0.5">{document.billing || customer?.billingAddress}</p>
             ) : null}
+            {customer?.phone ? <p className="text-sm text-neutral-600 mt-0.5">{customer.phone}</p> : null}
+            {customer?.gst ? <p className="text-sm text-neutral-600 mt-0.5">GSTIN {customer.gst}</p> : null}
+          </div>
+
+          <dl className="space-y-1.5 text-sm text-right">
+            {letterheadMode && (
+              <div>
+                <p className="text-xs tracking-[0.16em] text-neutral-500 uppercase">{noun}</p>
+                <p className="text-xl font-bold text-neutral-950">{document.number}</p>
+              </div>
+            )}
+            <div className="flex justify-between gap-6 md:justify-end pt-1">
+              <dt className="text-neutral-500">Date</dt>
+              <dd className="font-medium text-neutral-900">{formatDate(document.date)}</dd>
+            </div>
             {document.referenceNumber ? (
               <div className="flex justify-between gap-6 md:justify-end">
                 <dt className="text-neutral-500">Reference</dt>
-                <dd>{document.referenceNumber}</dd>
+                <dd className="font-medium text-neutral-900">{document.referenceNumber}</dd>
               </div>
             ) : null}
+            {letterheadMode && (
+              <div className="no-print pt-1">
+                <DocumentStatusDropdown kind={kind} id={document.id} initialDraft={document.draft} size="sm" />
+              </div>
+            )}
           </dl>
         </div>
 
-        <table className="w-full text-sm">
+        <table className="mt-6 w-full text-sm">
           <thead>
             <tr className="border-y border-neutral-200 text-left text-xs tracking-wide text-neutral-500 uppercase">
               <th className="py-2.5 font-medium">Item</th>

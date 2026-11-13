@@ -31,7 +31,7 @@ export function ItemForm({ item }: { item?: CatalogItem }) {
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="cost">Rate</Label>
-        <Input id="cost" name="cost" type="number" step="0.01" defaultValue={item?.cost ?? 0} className="h-9" />
+        <Input id="cost" name="cost" type="number" step="0.01" defaultValue={item?.cost || ""} className="h-9" />
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="unit">Unit</Label>

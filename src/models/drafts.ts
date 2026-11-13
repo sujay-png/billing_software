@@ -11,7 +11,7 @@ export function blankDraft(kind: DocumentKind, number: string): DocumentDraft {
     delivery: "",
     date,
     validDate: addDays(date, kind === "invoice" ? 7 : 15),
-    paymentTerms: "Due on receipt",
+    paymentTerms: "",
     notes: "",
     discount: 0,
     lines: [],

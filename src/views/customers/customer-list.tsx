@@ -1,5 +1,9 @@
+"use client";
+
+import { useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { Pencil } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Pencil, Search, X } from "lucide-react";
 import type { Customer } from "@/models/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +19,61 @@ export function CustomerList({
   query: string;
   archived: boolean;
 }) {
+  const router = useRouter();
+  const [prevQuery, setPrevQuery] = useState(query);
+  const [search, setSearch] = useState(query);
+  const [, startTransition] = useTransition();
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  if (prevQuery !== query) {
+    setPrevQuery(query);
+    setSearch(query);
+  }
+
+  const filteredCustomers = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return customers;
+    return customers.filter((customer) => {
+      const name = (customer.name || "").toLowerCase();
+      const phone = (customer.phone || "").toLowerCase();
+      const businessName = (customer.businessName || "").toLowerCase();
+      const gst = (customer.gst || "").toLowerCase();
+      const address = (customer.billingAddress || "").toLowerCase();
+      const email = (customer.email || "").toLowerCase();
+      return (
+        name.includes(term) ||
+        phone.includes(term) ||
+        businessName.includes(term) ||
+        gst.includes(term) ||
+        address.includes(term) ||
+        email.includes(term)
+      );
+    });
+  }, [customers, search]);
+
+  const updateSearchQuery = (val: string) => {
+    setSearch(val);
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    debounceRef.current = setTimeout(() => {
+      startTransition(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (val.trim()) {
+          params.set("q", val.trim());
+        } else {
+          params.delete("q");
+        }
+        const queryString = params.toString();
+        router.replace(`/customers${queryString ? `?${queryString}` : ""}`);
+      });
+    }, 250);
+  };
+
+  const clearSearch = () => {
+    updateSearchQuery("");
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -24,16 +83,31 @@ export function CustomerList({
         </div>
         <Button render={<Link href="/customers/new" />}>New customer</Button>
       </div>
-      <form className="flex max-w-xl gap-2">
-        <Input name="q" defaultValue={query} placeholder="Search name, phone, GST" className="h-10 bg-white" />
-        {archived ? <input type="hidden" name="archived" value="1" /> : null}
-        <Button type="submit" variant="outline">
-          Search
-        </Button>
+
+      <div className="flex max-w-xl gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-neutral-400 pointer-events-none" />
+          <Input
+            value={search}
+            onChange={(e) => updateSearchQuery(e.target.value)}
+            placeholder="Search name, phone, GST, place..."
+            className="h-10 bg-white pl-9 pr-8"
+          />
+          {search ? (
+            <button
+              type="button"
+              onClick={clearSearch}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700"
+              title="Clear search"
+            >
+              <X className="size-4" />
+            </button>
+          ) : null}
+        </div>
         <Button variant="ghost" render={<Link href={archived ? "/customers" : "/customers?archived=1"} />}>
           {archived ? "Hide archived" : "Archived"}
         </Button>
-      </form>
+      </div>
 
       <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-2xs">
         <Table className="w-full table-fixed">
@@ -47,14 +121,14 @@ export function CustomerList({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {customers.length === 0 ? (
+            {filteredCustomers.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="py-12 text-center text-neutral-500">
-                  No customers match.
+                  {search ? `No customers match "${search}".` : "No customers found."}
                 </TableCell>
               </TableRow>
             ) : (
-              customers.map((customer) => (
+              filteredCustomers.map((customer) => (
                 <TableRow key={customer.id} className="hover:bg-neutral-50/70 transition-colors">
                   <TableCell className="py-3.5 pl-4 truncate">
                     <div className="flex items-center gap-1.5 min-w-0">

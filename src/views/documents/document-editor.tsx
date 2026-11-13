@@ -187,8 +187,13 @@ DocumentEditor({
                         type="number"
                         min="0"
                         step="0.01"
-                        value={line.qty}
-                        onChange={(event) => editor.updateLine(line.key, { qty: Number(event.target.value) })}
+                        value={line.qty === 0 ? "" : line.qty}
+                        onFocus={(event) => event.target.select()}
+                        onChange={(event) =>
+                          editor.updateLine(line.key, {
+                            qty: event.target.value === "" ? 0 : Number(event.target.value),
+                          })
+                        }
                       />
                     </td>
                     <td className="px-3 py-2">
@@ -199,8 +204,13 @@ DocumentEditor({
                         type="number"
                         min="0"
                         step="0.01"
-                        value={line.rate}
-                        onChange={(event) => editor.updateLine(line.key, { rate: Number(event.target.value) })}
+                        value={line.rate === 0 ? "" : line.rate}
+                        onFocus={(event) => event.target.select()}
+                        onChange={(event) =>
+                          editor.updateLine(line.key, {
+                            rate: event.target.value === "" ? 0 : Number(event.target.value),
+                          })
+                        }
                       />
                     </td>
                     {!isEstimate && (
@@ -209,8 +219,13 @@ DocumentEditor({
                           type="number"
                           min="0"
                           step="0.01"
-                          value={line.taxRate}
-                          onChange={(event) => editor.updateLine(line.key, { taxRate: Number(event.target.value) })}
+                          value={line.taxRate === 0 ? "" : line.taxRate}
+                          onFocus={(event) => event.target.select()}
+                          onChange={(event) =>
+                            editor.updateLine(line.key, {
+                              taxRate: event.target.value === "" ? 0 : Number(event.target.value),
+                            })
+                          }
                         />
                       </td>
                     )}
@@ -219,8 +234,13 @@ DocumentEditor({
                         type="number"
                         min="0"
                         step="0.01"
-                        value={line.lineDiscount}
-                        onChange={(event) => editor.updateLine(line.key, { lineDiscount: Number(event.target.value) })}
+                        value={line.lineDiscount === 0 ? "" : line.lineDiscount}
+                        onFocus={(event) => event.target.select()}
+                        onChange={(event) =>
+                          editor.updateLine(line.key, {
+                            lineDiscount: event.target.value === "" ? 0 : Number(event.target.value),
+                          })
+                        }
                       />
                     </td>
                     <td className="px-3 py-3 text-right font-medium tabular-nums">{inr(amount.total)}</td>
@@ -305,8 +325,9 @@ DocumentEditor({
               min="0"
               step="0.01"
               className="w-32 text-right"
-              value={editor.discount}
-              onChange={(event) => editor.setDiscount(Number(event.target.value))}
+              value={editor.discount === 0 ? "" : editor.discount}
+              onFocus={(event) => event.target.select()}
+              onChange={(event) => editor.setDiscount(event.target.value === "" ? 0 : Number(event.target.value))}
             />
           </div>
           <Total label="Exact total" value={inr(editor.totals.grandTotal)} />
@@ -437,7 +458,7 @@ function ItemDialog({
   onCreated: (item: CatalogItem) => void;
 }) {
   const [name, setName] = useState("");
-  const [rate, setRate] = useState("0");
+  const [rate, setRate] = useState("");
   const [unit, setUnit] = useState("");
   const [hsn, setHsn] = useState("");
   const [error, setError] = useState("");
@@ -445,7 +466,7 @@ function ItemDialog({
 
   async function submit() {
     setPending(true);
-    const result = await quickCreateItem({ name, rate: Number(rate), unit, hsn });
+    const result = await quickCreateItem({ name, rate: Number(rate) || 0, unit, hsn });
     setPending(false);
     if (result.error || !result.item) {
       setError(result.error || "Could not add the item.");
@@ -454,7 +475,7 @@ function ItemDialog({
     onCreated(result.item);
     onOpenChange(false);
     setName("");
-    setRate("0");
+    setRate("");
     setUnit("");
     setHsn("");
     setError("");

@@ -148,8 +148,7 @@
   html,
   body,
   .min-h-screen,
-  main,
-  div {
+  main {
     background: white !important;
     background-color: white !important;
     color: #000 !important;
@@ -164,6 +163,12 @@
   }
   main {
     max-width: 100% !important;
+  }
+  .letterhead-spacer {
+    display: block !important;
+    width: 100% !important;
+    background: transparent !important;
+    visibility: visible !important;
   }
   .print-sheet {
     border: 0 !important;

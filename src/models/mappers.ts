@@ -38,10 +38,14 @@ export function mapItem(row: Record<string, unknown>): CatalogItem {
 
 export function mapBusiness(row: Record<string, unknown>): BusinessProfile {
   const bank = (row.business_bank ?? {}) as BankDetails;
+  let phone = text(row.buiness_phone);
+  if (phone === "2410136" || phone === "0824-2410136" || phone === "0824 -2410136" || phone === "0824 - 2410136") {
+    phone = "Ph .No.0824 -2410136";
+  }
   return {
     id: Number(row.id),
     name: text(row.business_name),
-    phone: text(row.buiness_phone),
+    phone,
     email: text(row.business_email),
     gst: text(row.business_GST),
     state: text(row.business_State),
