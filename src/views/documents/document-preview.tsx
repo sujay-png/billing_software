@@ -240,7 +240,7 @@ export function DocumentPreview({
             {!isEstimate && <Row label={taxSummaryLabel} value={inr(document.tax)} />}
             {document.discount ? <Row label="Discount" value={inr(document.discount)} /> : null}
             <div className="flex justify-between border-y border-neutral-900 py-3 text-base font-semibold">
-              <dt>{isEstimate ? `Total ${noun.toLowerCase()}` : "Amount due"}</dt>
+              <dt>{isEstimate ? "Total" : "Amount due"}</dt>
               <dd className="tabular-nums">{inr(totalAmount)}</dd>
             </div>
           </dl>
